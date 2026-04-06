@@ -86,7 +86,7 @@ export default function SchedulerDayView({
               </div>
 
               <div
-                className="flex-grow-1 px-2 py-1"
+                className="flex-grow-1 d-flex gap-1 px-2"
                 style={{ cursor: "pointer" }}
                 onDoubleClick={() =>
                   onSlotDoubleClick?.(selectedDate, slot.time24)

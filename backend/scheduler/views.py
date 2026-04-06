@@ -1,49 +1,82 @@
-from datetime import datetime, time
-from django.utils import timezone
-from rest_framework import generics, permissions
+from datetime import datetime
+
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 
-from .models import Appointment
-from .serializers import AppointmentSerializer
+from rest_framework import generics, permissions
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .models import (
+    Appointment,
+    FacilityMembership,
+    AppointmentStatus,
+    AppointmentType,
+)
+from .serializers import (
+    AppointmentSerializer,
+    CurrentUserSerializer,
+    PhysicianSerializer,
+    AppointmentStatusSerializer,
+    AppointmentTypeSerializer,
+)
 
 
-@method_decorator(ensure_csrf_cookie, name='dispatch')
+def get_active_membership(user):
+    return FacilityMembership.objects.filter(
+        user=user,
+        is_active=True
+    ).select_related("facility").first()
+
+
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 class AppointmentListCreateView(generics.ListCreateAPIView):
     serializer_class = AppointmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Appointment.objects.filter(
-            facility=self.request.user.staffprofile.facility
-        ).order_by('appointment_time')
+        memberships = FacilityMembership.objects.filter(
+            user=self.request.user,
+            is_active=True
+        ).values_list("facility_id", flat=True)
 
-        date_str = self.request.query_params.get('date')
+        queryset = Appointment.objects.filter(
+            facility_id__in=memberships
+        ).select_related(
+            "status",
+            "appointment_type",
+            "facility",
+        ).order_by("appointment_time")
+
+        date_str = self.request.query_params.get("date")
 
         if date_str:
             try:
                 selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-
-                start_of_day = timezone.make_aware(
-                    datetime.combine(selected_date, time.min)
-                )
-                end_of_day = timezone.make_aware(
-                    datetime.combine(selected_date, time.max)
-                )
-
-                queryset = queryset.filter(
-                    appointment_time__range=(start_of_day, end_of_day)
-                )
+                queryset = queryset.filter(appointment_time__date=selected_date)
             except ValueError:
                 pass
 
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(
-            created_by=self.request.user,
-            facility=self.request.user.staffprofile.facility
-        )
+        facility = serializer.validated_data.get("facility")
+        status = serializer.validated_data.get("status")
+        appointment_type = serializer.validated_data.get("appointment_type")
+
+        membership = get_active_membership(self.request.user)
+
+        if not membership or membership.facility_id != facility.id:
+            raise PermissionDenied("You do not have access to this facility.")
+
+        if status.facility_id != facility.id:
+            raise PermissionDenied("Selected status does not belong to this facility.")
+
+        if appointment_type.facility_id != facility.id:
+            raise PermissionDenied("Selected appointment type does not belong to this facility.")
+
+        serializer.save(created_by=self.request.user)
 
 
 class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -51,6 +84,121 @@ class AppointmentDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        memberships = FacilityMembership.objects.filter(
+            user=self.request.user,
+            is_active=True
+        ).values_list("facility_id", flat=True)
+
         return Appointment.objects.filter(
-            facility=self.request.user.staffprofile.facility
+            facility_id__in=memberships
+        ).select_related(
+            "status",
+            "appointment_type",
+            "facility",
         )
+
+    def perform_update(self, serializer):
+        facility = serializer.validated_data.get("facility", serializer.instance.facility)
+        status = serializer.validated_data.get("status", serializer.instance.status)
+        appointment_type = serializer.validated_data.get("appointment_type", serializer.instance.appointment_type)
+
+        membership = get_active_membership(self.request.user)
+
+        if not membership or membership.facility_id != facility.id:
+            raise PermissionDenied("You do not have access to this facility.")
+
+        if status.facility_id != facility.id:
+            raise PermissionDenied("Selected status does not belong to this facility.")
+
+        if appointment_type.facility_id != facility.id:
+            raise PermissionDenied("Selected appointment type does not belong to this facility.")
+
+        serializer.save()
+
+
+class CurrentUserView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        membership = get_active_membership(request.user)
+
+        data = {
+            "id": request.user.id,
+            "username": request.user.username,
+            "role": membership.role if membership else None,
+            "facility": {
+                "id": membership.facility.id,
+                "name": membership.facility.name,
+            } if membership else None,
+        }
+
+        serializer = CurrentUserSerializer(data)
+        return Response(serializer.data)
+
+
+class AppointmentStatusListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        membership = get_active_membership(request.user)
+
+        if not membership:
+            return Response([])
+
+        statuses = AppointmentStatus.objects.filter(
+            facility=membership.facility,
+            is_active=True
+        ).order_by("id")
+
+        serializer = AppointmentStatusSerializer(statuses, many=True)
+        return Response(serializer.data)
+
+
+class AppointmentTypeListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        membership = get_active_membership(request.user)
+
+        if not membership:
+            return Response([])
+
+        types = AppointmentType.objects.filter(
+            facility=membership.facility,
+            is_active=True
+        ).order_by("id")
+
+        serializer = AppointmentTypeSerializer(types, many=True)
+        return Response(serializer.data)
+
+
+class PhysicianListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        membership = get_active_membership(request.user)
+
+        if not membership:
+            return Response([])
+
+        physicians = FacilityMembership.objects.filter(
+            facility=membership.facility,
+            role="physician",
+            is_active=True
+        ).select_related("user").order_by(
+            "user__last_name",
+            "user__first_name",
+            "user__username"
+        )
+
+        data = [
+            {
+                "id": physician.user.id,
+                "name": physician.user.get_full_name() or physician.user.username,
+                "title": physician.title,
+            }
+            for physician in physicians
+        ]
+
+        serializer = PhysicianSerializer(data, many=True)
+        return Response(serializer.data)

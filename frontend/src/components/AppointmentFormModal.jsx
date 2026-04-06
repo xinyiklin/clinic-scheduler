@@ -1,7 +1,10 @@
 export default function AppointmentFormModal({
   isOpen,
-  mode = "create",
+  mode,
   formData,
+  physicians,
+  statusOptions,
+  typeOptions,
   error,
   onChange,
   onSubmit,
@@ -11,132 +14,134 @@ export default function AppointmentFormModal({
   if (!isOpen) return null;
 
   return (
-    <>
-      <div
-        className="position-fixed top-0 start-0 w-100 h-100"
-        style={{
-          backgroundColor: "rgba(0, 0, 0, 0.4)",
-          zIndex: 1040,
-        }}
-        onClick={onClose}
-      />
-
-      <div
-        className="position-fixed top-50 start-50 translate-middle w-100 px-3"
-        style={{ maxWidth: "600px", zIndex: 1050 }}
-      >
-        <div className="card shadow-lg">
-          <div className="card-body">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h2 className="h4 mb-0">
+    <div className="modal d-block" tabIndex="-1">
+      <div className="modal-dialog">
+        <div className="modal-content">
+          <form onSubmit={onSubmit}>
+            <div className="modal-header">
+              <h5 className="modal-title">
                 {mode === "edit" ? "Edit Appointment" : "Create Appointment"}
-              </h2>
-              <button
-                type="button"
-                className="btn-close"
-                onClick={onClose}
-              />
+              </h5>
+              <button type="button" className="btn-close" onClick={onClose}></button>
             </div>
 
-            {error && <div className="alert alert-danger">{error}</div>}
+            <div className="modal-body">
+              {error && <div className="alert alert-danger">{error}</div>}
 
-            <form onSubmit={onSubmit}>
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <label className="form-label">Patient Name</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="patient_name"
-                    value={formData.patient_name}
-                    onChange={onChange}
-                    required
-                  />
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label">Doctor Name</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    name="doctor_name"
-                    value={formData.doctor_name}
-                    onChange={onChange}
-                    required
-                  />
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label">Appointment Time</label>
-                  <input
-                    type="datetime-local"
-                    className="form-control"
-                    name="appointment_time"
-                    value={formData.appointment_time}
-                    onChange={onChange}
-                    required
-                  />
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label">Status</label>
-                  <select
-                    className="form-select"
-                    name="status"
-                    value={formData.status}
-                    onChange={onChange}
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="check_in">Check In</option>
-                    <option value="check_out">Check Out</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="no_show">No Show</option>
-                  </select>
-                </div>
-
-                <div className="col-12">
-                  <label className="form-label">Reason</label>
-                  <textarea
-                    className="form-control"
-                    name="reason"
-                    rows="3"
-                    value={formData.reason}
-                    onChange={onChange}
-                  />
-                </div>
-
-                <div className="col-12 d-flex justify-content-between gap-2">
-                  <div>
-                    {mode === "edit" && (
-                      <button
-                        type="button"
-                        className="btn btn-outline-danger"
-                        onClick={onDelete}
-                      >
-                        Delete Appointment
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="d-flex gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={onClose}
-                    >
-                      Cancel
-                    </button>
-
-                    <button type="submit" className="btn btn-primary">
-                      {mode === "edit" ? "Update Appointment" : "Create Appointment"}
-                    </button>
-                  </div>
-                </div>
+              <div className="mb-3">
+                <label className="form-label">Patient Name</label>
+                <input
+                  type="text"
+                  name="patient_name"
+                  className="form-control"
+                  value={formData.patient_name}
+                  onChange={onChange}
+                  required
+                />
               </div>
-            </form>
-          </div>
+
+              <div className="mb-3">
+                <label className="form-label">Physician</label>
+                <select
+                  name="doctor_name"
+                  className="form-select"
+                  value={formData.doctor_name}
+                  onChange={onChange}
+                  required
+                >
+                  <option value="">Select a physician</option>
+                  {physicians.map((physician) => (
+                    <option key={physician.id} value={physician.name}>
+                      {physician.title
+                        ? `${physician.title.toUpperCase()} ${physician.name}`
+                        : physician.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Appointment Time</label>
+                <input
+                  type="datetime-local"
+                  name="appointment_time"
+                  className="form-control"
+                  value={formData.appointment_time}
+                  onChange={onChange}
+                  required
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Visit Type</label>
+                <select
+                  name="appointment_type"
+                  className="form-select"
+                  value={formData.appointment_type}
+                  onChange={onChange}
+                  required
+                >
+                  <option value="">Select visit type</option>
+                  {typeOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Status</label>
+                <select
+                  name="status"
+                  className="form-select"
+                  value={formData.status}
+                  onChange={onChange}
+                  required
+                >
+                  <option value="">Select status</option>
+                  {statusOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Reason</label>
+                <textarea
+                  name="reason"
+                  className="form-control"
+                  value={formData.reason}
+                  onChange={onChange}
+                  rows="3"
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              {mode === "edit" && (
+                <button
+                  type="button"
+                  className="btn btn-danger me-auto"
+                  onClick={onDelete}
+                >
+                  Delete
+                </button>
+              )}
+
+              <button type="button" className="btn btn-secondary" onClick={onClose}>
+                Cancel
+              </button>
+
+              <button type="submit" className="btn btn-primary">
+                {mode === "edit" ? "Save Changes" : "Create Appointment"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-    </>
+    </div>
   );
 }
