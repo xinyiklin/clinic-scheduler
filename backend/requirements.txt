@@ -3,6 +3,8 @@ Django==4.2.29
 django-colorfield==0.14.0
 django-cors-headers==4.9.0
 djangorestframework==3.16.1
+gunicorn==23.0.0
+packaging==26.0
 pillow==11.3.0
 psycopg==3.2.13
 psycopg-binary==3.2.13
