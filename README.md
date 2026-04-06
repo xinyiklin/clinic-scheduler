@@ -1,77 +1,130 @@
-# Clinic Scheduler
+# 🏥 Full-Stack Clinic Scheduler
 
-A full-stack clinic appointment management system built with Django and React.
+A multi-tenant appointment scheduling system built with React and Django, designed for healthcare environments with role-based access and real-time scheduling workflows.
 
-## Features
+---
 
-- Create appointments
-- View appointments by facility
-- Delete appointments
-- Staff-based access control
-- Authentication with Django sessions and CSRF protection
+## 🚀 Features
 
-## Tech Stack
+- Role-based access (Admin, Physician, Staff)
+- Facility-based multi-tenant architecture
+- Interactive scheduler with drag-and-drop rescheduling
+- Real-time frontend and backend synchronization
+- Color-coded appointment status and types
+- RESTful API built with Django REST Framework
+- PostgreSQL database with relational schema and constraints
 
-### Backend
-- Django
-- Django REST Framework
+---
 
-### Frontend
-- React
-- Vite
+## 🛠 Tech Stack
+
+Frontend
+- React (Vite)
 - Axios
 - Bootstrap
 
-## Security
+Backend
+- Django
+- Django REST Framework
 
-- Session-based authentication
-- CSRF protection
-- Facility-level data isolation
+Database
+- PostgreSQL
 
-## Project Structure
+---
 
-```text
-clinic-scheduler/
-├── backend/     # Django backend
-└── frontend/    # React frontend
-```
+## ⚙️ Setup Instructions
 
-## Setup Instructions
+### 1. Clone the repository
 
-### Backend
+git clone https://github.com/xinyiklin/clinic-scheduler.git
+cd clinic-scheduler
 
-```bash
+---
+
+### 2. Backend Setup
+
 cd backend
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+
+---
+
+### 3. Configure PostgreSQL
+
+Update settings.py:
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'clinic_scheduler',
+        'USER': 'clinic_user',
+        'PASSWORD': 'password',
+        'HOST': 'localhost',
+        'PORT': '5433',
+    }
+}
+
+---
+
+### 4. Run migrations
+
 python manage.py migrate
-python manage.py createsuperuser
+
+---
+
+### 5. Seed demo data
+
+python manage.py seed_demo
+
+---
+
+### 6. Start backend
+
 python manage.py runserver
-```
 
-### Frontend
+---
 
-```bash
-cd frontend
+### 7. Frontend Setup
+
+cd ../frontend
 npm install
 npm run dev
-```
 
-## Usage
+---
 
-1. Log in at `http://localhost:8000/admin`
-2. Open the frontend at `http://localhost:5173`
+## 🔐 Demo Accounts
 
-## Notes
+Admin
+- Username: admin
+- Password: Admin123!
 
-- Uses a Vite proxy for local development
-- Axios is configured to work with Django CSRF protection
+Physician
+- Username: dr_smith
+- Password: Doctor123!
 
-## Author
+---
 
-Kevin Lin
+## 📌 Notes
 
-## License
+- A demo facility and physician are automatically created during setup
+- Appointment statuses and types are auto-generated per facility
+- Ensure PostgreSQL is running on port 5433 (or update settings accordingly)
 
-MIT
+---
+
+## 🌐 Future Improvements
+
+- Recurring appointments
+- Calendar (week/month view)
+- Notifications and reminders
+- Multi-facility switching
+- Deployment (Render + Vercel)
+
+---
+
+## 📬 Contact
+
+- Email: kevinlin11426@gmail.com
+- LinkedIn: https://www.linkedin.com/in/xinyiklin/
+- Portfolio: https://xinyiklin.github.io/
