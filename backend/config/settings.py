@@ -25,7 +25,11 @@ SECRET_KEY = 'django-insecure-@76x(blvm$gu6jz#j^_0o)^!13i^llmidr_(*d^f$mm0(yk9y!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    ".onrender.com",
+]
 
 # Application definition
 
@@ -134,6 +138,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "https://*.onrender.com",
+
 ]
 
 CSRF_TRUSTED_ORIGINS = [
