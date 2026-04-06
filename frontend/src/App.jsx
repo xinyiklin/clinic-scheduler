@@ -19,7 +19,9 @@ const emptyForm = {
   doctor_name: "",
   appointment_time: "",
   reason: "",
-  status: "pending",
+  status: "",
+  appointment_type: "",
+  facility: "",
 };
 
 function App() {
@@ -28,9 +30,67 @@ function App() {
   const [error, setError] = useState("");
   const [selectedDate, setSelectedDate] = useState(getTodayLocal());
 
+  const [facility, setFacility] = useState(null);
+  const [role, setRole] = useState(null);
+
+  const [physicians, setPhysicians] = useState([]);
+  const [statusOptions, setStatusOptions] = useState([]);
+  const [typeOptions, setTypeOptions] = useState([]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyForm);
+
+  const fetchUser = async () => {
+    try {
+      const res = await axios.get("/api/me/", {
+        withCredentials: true,
+      });
+
+      setFacility(res.data.facility || null);
+      setRole(res.data.role || null);
+      setError("");
+    } catch (err) {
+      console.error(err.response?.data || err);
+      setError("Failed to load user info.");
+    }
+  };
+
+  const fetchPhysicians = async () => {
+    try {
+      const res = await axios.get("/api/physicians/", {
+        withCredentials: true,
+      });
+      setPhysicians(res.data);
+    } catch (err) {
+      console.error(err.response?.data || err);
+      setError("Failed to load physicians.");
+    }
+  };
+
+  const fetchStatusOptions = async () => {
+    try {
+      const res = await axios.get("/api/appointment-statuses/", {
+        withCredentials: true,
+      });
+      setStatusOptions(res.data);
+    } catch (err) {
+      console.error(err.response?.data || err);
+      setError("Failed to load appointment statuses.");
+    }
+  };
+
+  const fetchTypeOptions = async () => {
+    try {
+      const res = await axios.get("/api/appointment-types/", {
+        withCredentials: true,
+      });
+      setTypeOptions(res.data);
+    } catch (err) {
+      console.error(err.response?.data || err);
+      setError("Failed to load appointment types.");
+    }
+  };
 
   const fetchAppointments = async (date = selectedDate, silent = false) => {
     try {
@@ -51,14 +111,32 @@ function App() {
   };
 
   useEffect(() => {
-    fetchAppointments(selectedDate, false);
-  }, [selectedDate]);
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+    if (facility) {
+      fetchPhysicians();
+      fetchStatusOptions();
+      fetchTypeOptions();
+    }
+  }, [facility]);
+
+  useEffect(() => {
+    if (facility) {
+      fetchAppointments(selectedDate, false);
+    }
+  }, [selectedDate, facility]);
 
   const openCreateModal = () => {
     setEditingId(null);
     setFormData({
       ...emptyForm,
+      facility: facility?.id || "",
+      doctor_name: physicians.length === 1 ? physicians[0].name : "",
       appointment_time: `${selectedDate}T09:00`,
+      status: statusOptions.length > 0 ? statusOptions[0].id : "",
+      appointment_type: typeOptions.length > 0 ? typeOptions[0].id : "",
     });
     setError("");
     setIsModalOpen(true);
@@ -72,6 +150,8 @@ function App() {
       appointment_time: appointment.appointment_time.slice(0, 16),
       reason: appointment.reason || "",
       status: appointment.status,
+      appointment_type: appointment.appointment_type,
+      facility: appointment.facility,
     });
     setError("");
     setIsModalOpen(true);
@@ -81,7 +161,11 @@ function App() {
     setEditingId(null);
     setFormData({
       ...emptyForm,
+      facility: facility?.id || "",
+      doctor_name: physicians.length === 1 ? physicians[0].name : "",
       appointment_time: `${date}T${time24}`,
+      status: statusOptions.length > 0 ? statusOptions[0].id : "",
+      appointment_type: typeOptions.length > 0 ? typeOptions[0].id : "",
     });
     setError("");
     setIsModalOpen(true);
@@ -105,13 +189,22 @@ function App() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const payload = {
+      ...formData,
+      status: formData.status ? Number(formData.status) : "",
+      appointment_type: formData.appointment_type
+        ? Number(formData.appointment_type)
+        : "",
+      facility: formData.facility ? Number(formData.facility) : "",
+    };
+
     try {
       if (editingId) {
-        await axios.put(`${API_URL}${editingId}/`, formData, {
+        await axios.put(`${API_URL}${editingId}/`, payload, {
           withCredentials: true,
         });
       } else {
-        await axios.post(API_URL, formData, {
+        await axios.post(API_URL, payload, {
           withCredentials: true,
         });
       }
@@ -148,7 +241,12 @@ function App() {
     patient_name: appointment.patient_name,
     doctor_name: appointment.doctor_name,
     reason: appointment.reason,
-    status: appointment.status,
+    status: appointment.status_code,
+    status_name: appointment.status_name,
+    status_color: appointment.status_color,
+    appointment_type: appointment.appointment_type_code,
+    appointment_type_name: appointment.appointment_type_name,
+    appointment_type_color: appointment.appointment_type_color,
     created_by_name: appointment.created_by_name,
     appointment_time: appointment.appointment_time,
     date: extractStoredDate(appointment.appointment_time),
@@ -159,19 +257,22 @@ function App() {
   return (
     <div className="container py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="mb-0">Clinic Scheduler</h1>
+        <div>
+          <h1 className="mb-0">{facility?.name || "Facility Scheduler"}</h1>
+          {role && <small className="text-muted">Role: {role}</small>}
+        </div>
 
         <button
           type="button"
           className="btn btn-primary"
           onClick={openCreateModal}
+          disabled={!facility}
         >
           Add Appointment
         </button>
       </div>
 
       {loading && appointments.length === 0 && <p>Loading appointments...</p>}
-
       {error && !isModalOpen && <div className="alert alert-danger">{error}</div>}
 
       {(appointments.length > 0 || !loading) && (
@@ -188,6 +289,9 @@ function App() {
         isOpen={isModalOpen}
         mode={editingId ? "edit" : "create"}
         formData={formData}
+        physicians={physicians}
+        statusOptions={statusOptions}
+        typeOptions={typeOptions}
         error={error}
         onChange={handleChange}
         onSubmit={handleSubmit}
