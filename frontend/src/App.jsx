@@ -12,7 +12,10 @@ import {
 axios.defaults.xsrfCookieName = "csrftoken";
 axios.defaults.xsrfHeaderName = "X-CSRFToken";
 
-const API_URL = "/api/appointments/";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
+const API_URL = `${API_BASE_URL}/api/appointments/`;
 
 const emptyForm = {
   patient_name: "",
@@ -45,7 +48,7 @@ function App() {
 
   const fetchUser = async () => {
     try {
-      const res = await axios.get("/api/me/", {
+      const res = await axios.get(`${API_BASE_URL}/api/me/`, {
         withCredentials: true,
       });
 
@@ -60,7 +63,7 @@ function App() {
 
   const fetchPhysicians = async () => {
     try {
-      const res = await axios.get("/api/physicians/", {
+      const res = await axios.get(`${API_BASE_URL}/api/physicians/`, {
         withCredentials: true,
       });
       setPhysicians(res.data);
@@ -72,7 +75,7 @@ function App() {
 
   const fetchStatusOptions = async () => {
     try {
-      const res = await axios.get("/api/appointment-statuses/", {
+      const res = await axios.get(`${API_BASE_URL}/api/appointment-statuses/`, {
         withCredentials: true,
       });
       setStatusOptions(res.data);
@@ -84,7 +87,7 @@ function App() {
 
   const fetchTypeOptions = async () => {
     try {
-      const res = await axios.get("/api/appointment-types/", {
+      const res = await axios.get(`${API_BASE_URL}/api/appointment-types/`, {
         withCredentials: true,
       });
       setTypeOptions(res.data);
@@ -308,7 +311,9 @@ function App() {
       </div>
 
       {loading && appointments.length === 0 && <p>Loading appointments...</p>}
-      {error && !isModalOpen && <div className="alert alert-danger">{error}</div>}
+      {error && !isModalOpen && (
+        <div className="alert alert-danger">{error}</div>
+      )}
 
       {(appointments.length > 0 || !loading) && (
         <SchedulerDayView
