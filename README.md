@@ -2,6 +2,10 @@
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo-green)](https://clinic-scheduler-xinyiklins-projects.vercel.app/)
 
+**Demo Login:**
+- Username: admin  
+- Password: Admin123!
+
 A multi-tenant appointment scheduling system built with React and Django, designed for healthcare environments with role-based access and real-time scheduling workflows.
 
 ---
