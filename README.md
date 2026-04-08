@@ -1,201 +1,110 @@
-# 🏥 Full-Stack Clinic Scheduler
+# 🏥 Clinic Scheduler
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-green)](https://clinic-scheduler-xinyiklins-projects.vercel.app/)
+## 💡 Project Summary
 
-**Demo Login:**
-- Username: admin  
-- Password: Admin123!
+Built a full-stack clinic scheduling system that simulates real-world healthcare workflows, including patient management, appointment scheduling, and facility-level configuration.
 
-A multi-tenant appointment scheduling system built with React and Django, designed for healthcare environments with role-based access and real-time scheduling workflows.
+Designed and implemented both frontend and backend systems with a focus on usability, scalability, and clean data modeling. This project goes beyond basic CRUD by incorporating role-based access, dynamic configuration, and real-time UI interactions.
 
 ---
 
-## 🚀 Features
+## 🚀 Key Highlights
 
-### 🔐 Authentication
-- JWT-based authentication (access + refresh tokens)
-- Secure login/logout flow
-- Automatic token refresh on expiration
-- Protected API routes
+- 🔎 Real-time Patient Search
+  - Debounced search with filtering by name, DOB, and MRN
+  - Reduced unnecessary API calls and improved responsiveness
 
-### 🏥 Multi-Tenant Architecture
-- Facility-based data isolation
-- Users scoped to a single facility
-- Facility-specific:
-  - Appointment statuses
-  - Appointment types
-  - Staff roles & titles
+- 📅 Appointment Scheduling System
+  - Day-based calendar view with drag-and-drop rescheduling
+  - Full create/edit/delete workflow with validation
 
-### 📅 Scheduler
-- Interactive day-view scheduler
-- Drag-and-drop rescheduling
-- Double-click to create appointment
-- Real-time frontend/backend sync
-- Color-coded appointment statuses and visit types
+- 🧑‍⚕️ Patient Management System
+  - Unified create/edit modal
+  - MRN system-controlled and immutable
+  - Integrated seamlessly with appointment flow
 
-### 👨‍⚕️ Staff & Patients
-- Role-based access (Admin, Physician, Staff)
-- Physician list integration for scheduling
-- Patient management with uniqueness constraints per facility
+- 🏢 Facility-Based Configuration
+  - Dynamic configuration for statuses, visit types, and genders
+  - Eliminated hardcoded enums for scalability
+
+- 🔐 Authentication & Access Control
+  - JWT-based authentication
+  - Facility-scoped data access
 
 ---
 
-## 🛠 Tech Stack
+## 🧠 Technical Strengths
 
-### Frontend
-- React (Vite)
-- Tailwind CSS
-- Custom Fetch API client (centralized)
-
-### Backend
-- Django
-- Django REST Framework
-- SimpleJWT (authentication)
-
-### Database
-- PostgreSQL
+- Full-stack development (React + Django REST Framework)
+- Relational database design with PostgreSQL
+- Handling schema changes (CharField → ForeignKey)
+- API design and validation
+- UI state management for complex workflows
+- Performance optimization (debouncing, pagination)
+- Debugging migrations and database permissions
 
 ---
 
-## ⚙️ Architecture Highlights
+## ⚙️ Tech Stack
 
-- Modular Django apps:
-  - `accounts` (authentication)
-  - `facilities` (multi-tenant core)
-  - `patients`
-  - `scheduler`
-- Centralized API client (`client.js`)
-- Automatic token refresh + retry mechanism
-- Clean separation of UI, API layer, and business logic
+Frontend: React, Tailwind CSS, Material UI  
+Backend: Django, Django REST Framework  
+Database: PostgreSQL  
+Deployment: Render
 
 ---
 
-## ⚙️ Setup Instructions
-
-### 1. Clone the repository
+## 🧪 Local Setup
 
 ```bash
-git clone https://github.com/xinyiklin/clinic-scheduler.git
-cd clinic-scheduler
-```
+git clone https://github.com/your-username/clinic-scheduler.git
+cd clinic-scheduler/backend
 
----
-
-### 2. Backend Setup
-
-```bash
-cd backend
-python3 -m venv venv
+python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 ```
 
----
-
-### 3. Configure PostgreSQL
-
-Update `settings.py`:
-
+### Database
 ```python
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'clinic_scheduler',
-        'USER': 'clinic_user',
-        'PASSWORD': 'password',
-        'HOST': 'localhost',
-        'PORT': '5433',
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "clinic_scheduler",
+        "USER": "clinic_user",
+        "PASSWORD": "password",
+        "HOST": "localhost",
+        "PORT": "5433",
     }
 }
 ```
 
----
-
-### 4. Run migrations
-
+### Run
 ```bash
 python manage.py migrate
+python manage.py seed_demo --reset-appointments
+python manage.py runserver
 ```
 
 ---
 
-### 5. Seed demo data
+## 🔑 Demo Credentials
 
-```bash
-python manage.py seed_demo
-```
-
----
-
-### 6. Start backend
-
-```bash
-python manage.py runserver localhost:8000
-```
+Username: admin  
+Password: Admin123!
 
 ---
 
-### 7. Frontend Setup
+## 🧠 What I Learned
 
-```bash
-cd ../frontend
-npm install
-npm run dev
-```
-
-Frontend runs on:
-
-```
-http://localhost:5173
-```
+- Designing scalable relational data models
+- Managing schema migrations and breaking changes
+- Building intuitive UI tied to backend constraints
+- Implementing authentication and multi-tenant logic
+- Debugging database and deployment issues
 
 ---
 
-## 🔐 Demo Accounts
+## 🌐 Live Demo
 
-### Admin
-- Username: admin
-- Password: Admin123!
-
-### Physician
-- Username: dr_smith
-- Password: Doctor123!
-
----
-
-## 🔄 API Overview
-
-| Endpoint | Description |
-|--------|------------|
-| `/api/accounts/token/` | Login (JWT) |
-| `/api/accounts/token/refresh/` | Refresh token |
-| `/api/facilities/me/` | Current user + facility |
-| `/api/scheduler/appointments/` | Appointment CRUD |
-
----
-
-## 📌 Notes
-
-- Appointment statuses, types, roles, and titles are auto-generated per facility
-- Data is fully isolated per facility (multi-tenant design)
-- Token refresh is handled automatically on the frontend
-- Ensure PostgreSQL is running on port 5433 (or update settings accordingly)
-
----
-
-## 🌐 Future Improvements
-
-- Material UI DatePicker integration
-- Weekly/monthly calendar views
-- Patient search/autocomplete
-- Notifications and reminders
-- Multi-facility switching
-- Deployment (Render + Vercel)
-
----
-
-## 📬 Contact
-
-- Email: kevinlin11426@gmail.com
-- LinkedIn: https://www.linkedin.com/in/xinyiklin/
-- Portfolio: https://xinyiklin.github.io/
+https://clinic-scheduler-68hl.onrender.com
