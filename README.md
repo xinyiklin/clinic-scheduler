@@ -6,29 +6,61 @@ A multi-tenant appointment scheduling system built with React and Django, design
 
 ## 🚀 Features
 
+### 🔐 Authentication
+- JWT-based authentication (access + refresh tokens)
+- Secure login/logout flow
+- Automatic token refresh on expiration
+- Protected API routes
+
+### 🏥 Multi-Tenant Architecture
+- Facility-based data isolation
+- Users scoped to a single facility
+- Facility-specific:
+  - Appointment statuses
+  - Appointment types
+  - Staff roles & titles
+
+### 📅 Scheduler
+- Interactive day-view scheduler
+- Drag-and-drop rescheduling
+- Double-click to create appointment
+- Real-time frontend/backend sync
+- Color-coded appointment statuses and visit types
+
+### 👨‍⚕️ Staff & Patients
 - Role-based access (Admin, Physician, Staff)
-- Facility-based multi-tenant architecture
-- Interactive scheduler with drag-and-drop rescheduling
-- Real-time frontend and backend synchronization
-- Color-coded appointment status and types
-- RESTful API built with Django REST Framework
-- PostgreSQL database with relational schema and constraints
+- Physician list integration for scheduling
+- Patient management with uniqueness constraints per facility
 
 ---
 
 ## 🛠 Tech Stack
 
-Frontend
+### Frontend
 - React (Vite)
-- Axios
-- Bootstrap
+- Tailwind CSS
+- Custom Fetch API client (centralized)
 
-Backend
+### Backend
 - Django
 - Django REST Framework
+- SimpleJWT (authentication)
 
-Database
+### Database
 - PostgreSQL
+
+---
+
+## ⚙️ Architecture Highlights
+
+- Modular Django apps:
+  - `accounts` (authentication)
+  - `facilities` (multi-tenant core)
+  - `patients`
+  - `scheduler`
+- Centralized API client (`client.js`)
+- Automatic token refresh + retry mechanism
+- Clean separation of UI, API layer, and business logic
 
 ---
 
@@ -36,24 +68,29 @@ Database
 
 ### 1. Clone the repository
 
+```bash
 git clone https://github.com/xinyiklin/clinic-scheduler.git
 cd clinic-scheduler
+```
 
 ---
 
 ### 2. Backend Setup
 
+```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+```
 
 ---
 
 ### 3. Configure PostgreSQL
 
-Update settings.py:
+Update `settings.py`:
 
+```python
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -64,59 +101,87 @@ DATABASES = {
         'PORT': '5433',
     }
 }
+```
 
 ---
 
 ### 4. Run migrations
 
+```bash
 python manage.py migrate
+```
 
 ---
 
 ### 5. Seed demo data
 
+```bash
 python manage.py seed_demo
+```
 
 ---
 
 ### 6. Start backend
 
-python manage.py runserver
+```bash
+python manage.py runserver localhost:8000
+```
 
 ---
 
 ### 7. Frontend Setup
 
+```bash
 cd ../frontend
 npm install
 npm run dev
+```
+
+Frontend runs on:
+
+```
+http://localhost:5173
+```
 
 ---
 
 ## 🔐 Demo Accounts
 
-Admin
+### Admin
 - Username: admin
 - Password: Admin123!
 
-Physician
+### Physician
 - Username: dr_smith
 - Password: Doctor123!
 
 ---
 
+## 🔄 API Overview
+
+| Endpoint | Description |
+|--------|------------|
+| `/api/accounts/token/` | Login (JWT) |
+| `/api/accounts/token/refresh/` | Refresh token |
+| `/api/facilities/me/` | Current user + facility |
+| `/api/scheduler/appointments/` | Appointment CRUD |
+
+---
+
 ## 📌 Notes
 
-- A demo facility and physician are automatically created during setup
-- Appointment statuses and types are auto-generated per facility
+- Appointment statuses, types, roles, and titles are auto-generated per facility
+- Data is fully isolated per facility (multi-tenant design)
+- Token refresh is handled automatically on the frontend
 - Ensure PostgreSQL is running on port 5433 (or update settings accordingly)
 
 ---
 
 ## 🌐 Future Improvements
 
-- Recurring appointments
-- Calendar (week/month view)
+- Material UI DatePicker integration
+- Weekly/monthly calendar views
+- Patient search/autocomplete
 - Notifications and reminders
 - Multi-facility switching
 - Deployment (Render + Vercel)
