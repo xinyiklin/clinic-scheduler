@@ -12,10 +12,7 @@ IS_PRODUCTION = not DEBUG
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")
 
 # --- HOSTS ---
-ALLOWED_HOSTS = [
-    "localhost",
-    ".onrender.com",
-]
+ALLOWED_HOSTS = [host for host in os.environ.get("ALLOWED_HOSTS", "").split(",") if host]
 
 # --- APPS ---
 INSTALLED_APPS = [
@@ -121,7 +118,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # --- CORS (LOCAL + PROD) ---
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "https://clinic-scheduler-seven.vercel.app",
+    "https://clinic-scheduler-xinyiklins-projects.vercel.app",
 ]
 
 # allow preview deployments
@@ -131,8 +128,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
-    "https://clinic-scheduler-seven.vercel.app",
-    "https://clinic-scheduler-68hl.onrender.com",
+    "https://clinic-scheduler-xinyiklins-projects.vercel.app",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
