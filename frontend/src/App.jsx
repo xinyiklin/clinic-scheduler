@@ -92,6 +92,19 @@ function App() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    setIsAuthenticated(false);
+    setFacility(null);
+    setRole(null);
+    setAppointments([]);
+    setPhysicians([]);
+    setStatusOptions([]);
+    setTypeOptions([]);
+    setError("");
+  };
+
   const loadPhysicians = async () => {
     try {
       const data = await fetchPhysicians(token);
@@ -155,6 +168,18 @@ function App() {
       loadAppointments(selectedDate, false);
     }
   }, [isAuthenticated, selectedDate, facility]);
+
+  useEffect(() => {
+    const onLogout = () => {
+      handleLogout();
+    };
+
+    window.addEventListener("auth:logout", onLogout);
+
+    return () => {
+      window.removeEventListener("auth:logout", onLogout);
+    };
+  }, []);
 
   const openCreateModal = () => {
     setEditingId(null);
@@ -342,11 +367,7 @@ function App() {
 
           <button
             type="button"
-            onClick={() => {
-              localStorage.removeItem("accessToken");
-              localStorage.removeItem("refreshToken");
-              setIsAuthenticated(false);
-            }}
+            onClick={handleLogout}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
           >
             Logout
