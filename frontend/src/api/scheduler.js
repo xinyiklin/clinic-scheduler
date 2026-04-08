@@ -1,7 +1,8 @@
 import { apiRequest, getAuthHeaders } from "./client";
 
-export function fetchAppointments({ date, token }) {
+export function fetchAppointments({ date, token } = {}) {
   const query = date ? `?date=${encodeURIComponent(date)}` : "";
+
   return apiRequest(`/api/scheduler/appointments/${query}`, {
     headers: {
       ...getAuthHeaders(token),

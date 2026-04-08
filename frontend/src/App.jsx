@@ -53,8 +53,6 @@ function App() {
 
   const [draggedAppointment, setDraggedAppointment] = useState(null);
 
-  const token = localStorage.getItem("accessToken");
-
   const [isAuthenticated, setIsAuthenticated] = useState(
     !!localStorage.getItem("accessToken")
   );
@@ -80,18 +78,6 @@ function App() {
     }
   };
 
-  const loadUser = async () => {
-    try {
-      const data = await fetchCurrentUser(token);
-      setFacility(data.facility || null);
-      setRole(data.role || null);
-      setError("");
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load user info.");
-    }
-  };
-
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
@@ -103,11 +89,27 @@ function App() {
     setStatusOptions([]);
     setTypeOptions([]);
     setError("");
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData(emptyForm);
+    setDraggedAppointment(null);
+  };
+
+  const loadUser = async () => {
+    try {
+      const data = await fetchCurrentUser();
+      setFacility(data.facility || null);
+      setRole(data.role || null);
+      setError("");
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load user info.");
+    }
   };
 
   const loadPhysicians = async () => {
     try {
-      const data = await fetchPhysicians(token);
+      const data = await fetchPhysicians();
       setPhysicians(data);
     } catch (err) {
       console.error(err);
@@ -117,7 +119,7 @@ function App() {
 
   const loadStatusOptions = async () => {
     try {
-      const data = await fetchAppointmentStatuses(token);
+      const data = await fetchAppointmentStatuses();
       setStatusOptions(data);
     } catch (err) {
       console.error(err);
@@ -127,7 +129,7 @@ function App() {
 
   const loadTypeOptions = async () => {
     try {
-      const data = await fetchAppointmentTypes(token);
+      const data = await fetchAppointmentTypes();
       setTypeOptions(data);
     } catch (err) {
       console.error(err);
@@ -138,7 +140,7 @@ function App() {
   const loadAppointments = async (date = selectedDate, silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const data = await fetchAppointments({ date, token });
+      const data = await fetchAppointments({ date });
       setAppointments(data);
       setError("");
     } catch (err) {
@@ -253,9 +255,9 @@ function App() {
 
     try {
       if (editingId) {
-        await updateAppointment(editingId, payload, token);
+        await updateAppointment(editingId, payload);
       } else {
-        await createAppointment(payload, token);
+        await createAppointment(payload);
       }
 
       await loadAppointments(selectedDate, true);
@@ -274,7 +276,7 @@ function App() {
     }
 
     try {
-      await deleteAppointment(editingId, token);
+      await deleteAppointment(editingId);
       await loadAppointments(selectedDate, true);
       closeModal();
     } catch (err) {
@@ -301,7 +303,7 @@ function App() {
     };
 
     try {
-      await updateAppointment(draggedAppointment.id, payload, token);
+      await updateAppointment(draggedAppointment.id, payload);
       setDraggedAppointment(null);
       await loadAppointments(selectedDate, true);
     } catch (err) {
@@ -348,11 +350,7 @@ function App() {
           <h1 className="text-3xl font-semibold text-slate-900">
             {facility?.name || "Facility Scheduler"}
           </h1>
-          {role && (
-            <p className="mt-1 text-sm text-slate-500">
-              Role: {role}
-            </p>
-          )}
+          {role && <p className="mt-1 text-sm text-slate-500">Role: {role}</p>}
         </div>
 
         <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -381,6 +379,9 @@ function App() {
         </div>
       )}
 
+      {loading && appointments.length === 0 && (
+        <p className="text-sm text-slate-600">Loading appointments...</p>
+      )}
 
       {(appointments.length > 0 || !loading) && (
         <SchedulerDayView
