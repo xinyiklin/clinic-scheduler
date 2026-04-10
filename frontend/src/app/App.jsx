@@ -214,17 +214,15 @@ function App() {
         </div>
       )}
 
-      {(appointments.length > 0 || !appointmentsLoading) && (
-        <SchedulerDayView
-          appointments={formattedAppointments}
-          intervalMinutes={15}
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-          onSlotDoubleClick={appointmentFlow.openCreateFromSlot}
-          onAppointmentDragStart={appointmentFlow.setDraggedAppointment}
-          onAppointmentDrop={handleDropAppointment}
-        />
-      )}
+      <SchedulerDayView
+        appointments={formattedAppointments}
+        intervalMinutes={15}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        onSlotDoubleClick={appointmentFlow.openCreateFromSlot}
+        onAppointmentDragStart={appointmentFlow.setDraggedAppointment}
+        onAppointmentDrop={handleDropAppointment}
+      />
 
       <AppointmentFormModal
         isOpen={appointmentFlow.isModalOpen}
