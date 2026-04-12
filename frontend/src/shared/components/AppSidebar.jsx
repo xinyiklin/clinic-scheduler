@@ -7,7 +7,7 @@ export default function AppSidebar({
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/30 lg:bg-transparent"
           onClick={onClose}
         />
       )}
@@ -20,14 +20,6 @@ export default function AppSidebar({
       >
         <div className="flex h-14 items-center justify-between border-b border-slate-200 px-4">
           <span className="text-sm font-semibold text-slate-900">Menu</span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700  lg:hidden"
-            aria-label="Close sidebar"
-          >
-            ✕
-          </button>
         </div>
 
         <nav className="p-4">
