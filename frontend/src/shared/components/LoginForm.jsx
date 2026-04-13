@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { APP_NAME } from "../constants/app";
 
 export default function LoginForm({ onSubmit, error, loading }) {
   const [formData, setFormData] = useState({
@@ -24,7 +25,7 @@ export default function LoginForm({ onSubmit, error, loading }) {
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-slate-900">
-            Clinic Scheduler
+            {APP_NAME}
           </h1>
           <p className="mt-2 text-sm text-slate-500">
             Sign in to access the scheduler.
