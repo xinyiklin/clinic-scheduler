@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
-from .views import RegisterView, UserProfileView
+from .views import RegisterView, UserProfileView, health_check
 
 urlpatterns = [
     # --- Auth (JWT) ---
@@ -14,4 +14,7 @@ urlpatterns = [
     # --- User endpoints ---
     path("register/", RegisterView.as_view(), name="register"),
     path("me/", UserProfileView.as_view(), name="user_profile"),
+
+        path("health/", health_check),
+
 ]
