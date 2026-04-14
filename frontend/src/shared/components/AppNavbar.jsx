@@ -49,7 +49,7 @@ export default function AppNavbar({
       <div className="relative h-14">
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4 select-none">
           <div className="flex min-w-0 items-center gap-3">
-            <h1 className="truncate text-base font-semibold tracking-tight text-slate-900">
+            <h1 className="truncate text-base font-medium tracking-tight text-slate-800">
               {APP_NAME}
             </h1>
 
@@ -57,23 +57,21 @@ export default function AppNavbar({
               ref={patientMenuRef}
               className="relative flex items-center"
             >
-              <div className="inline-flex overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
+              <div className="inline-flex items-center gap-1 rounded-md bg-transparent">
                 <button
                   type="button"
                   onClick={onOpenPatientSearch}
-                  className="inline-flex h-10 items-center justify-center px-3 text-slate-700 transition hover:bg-slate-50"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
                   aria-label="Search patients"
                   title="Search patients"
                 >
                   <Search className="h-4 w-4" />
                 </button>
 
-                <div className="w-px bg-slate-300" />
-
                 <button
                   type="button"
                   onClick={() => setIsPatientMenuOpen((prev) => !prev)}
-                  className="inline-flex h-10 items-center justify-center px-3 text-slate-700 transition hover:bg-slate-50"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
                   aria-label="Open recent patients"
                   title="Recent patients"
                 >
