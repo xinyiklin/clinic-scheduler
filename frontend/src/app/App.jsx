@@ -34,7 +34,7 @@ function App() {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   const handleLoginSubmit = async (credentials) => {
     setAuthLoading(true);
@@ -57,6 +57,7 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    localStorage.removeItem("recentPatients");
     queryClient.clear();
     setIsAuthenticated(false);
     setAppError("");
