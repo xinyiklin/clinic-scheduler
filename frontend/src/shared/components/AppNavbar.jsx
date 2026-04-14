@@ -62,7 +62,7 @@ export default function AppNavbar({
           </div>
         )}
 
-        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4">
+        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4 select-none">
           <div className="flex min-w-0 items-center gap-3">
             <h1 className="truncate text-base font-semibold tracking-tight text-slate-900">
               {APP_NAME}

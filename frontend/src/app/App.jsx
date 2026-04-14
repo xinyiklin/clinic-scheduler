@@ -192,7 +192,7 @@ function App() {
       <div
         className={[
           "flex flex-1 flex-col transition-all duration-200",
-          isSidebarOpen ? "lg:ml-64" : "lg:ml-0",
+          isSidebarOpen ? "lg:ml-36" : "lg:ml-0",
         ].join(" ")}
       >
         <AppNavbar
