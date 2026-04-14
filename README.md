@@ -10,44 +10,46 @@ Designed and implemented both frontend and backend systems with a focus on usabi
 
 ## 🌐 Live Demo
 
-https://clinic-scheduler-seven.vercel.app/
+https://clinic-scheduler.xinyiklin.com  
 
 ---
 
 ## 🚀 Key Highlights
 
-- 🔎 Real-time Patient Search
-  - Debounced search with filtering by name, DOB, and MRN
-  - Reduced unnecessary API calls and improved responsiveness
+- 🔎 Real-time Patient Search  
+  - Debounced search with filtering by name, DOB, and MRN  
+  - Reduced unnecessary API calls and improved responsiveness  
 
-- 📅 Appointment Scheduling System
-  - Day-based calendar view with drag-and-drop rescheduling
-  - Full create/edit/delete workflow with validation
+- 📅 Appointment Scheduling System  
+  - Day-based calendar view with drag-and-drop rescheduling  
+  - Full create/edit/delete workflow with validation  
 
-- 🧑‍⚕️ Patient Management System
-  - Unified create/edit modal
-  - MRN system-controlled and immutable
-  - Integrated seamlessly with appointment flow
+- 🧑‍⚕️ Patient Management System  
+  - Unified create/edit modal  
+  - MRN system-controlled and immutable  
+  - Integrated seamlessly with appointment flow  
+  - Recent patients persistence (localStorage)  
 
-- 🏢 Facility-Based Configuration
-  - Dynamic configuration for statuses, visit types, and genders
-  - Eliminated hardcoded enums for scalability
+- 🏢 Facility-Based Configuration  
+  - Dynamic configuration for statuses, visit types, and genders  
+  - Eliminated hardcoded enums for scalability  
 
-- 🔐 Authentication & Access Control
-  - JWT-based authentication
-  - Facility-scoped data access
+- 🔐 Authentication & Access Control  
+  - JWT-based authentication  
+  - Facility-scoped data access  
 
 ---
 
 ## 🧠 Technical Strengths
 
-- Full-stack development (React + Django REST Framework)
-- Relational database design with PostgreSQL
-- Handling schema changes (CharField → ForeignKey)
-- API design and validation
-- UI state management for complex workflows
-- Performance optimization (debouncing, pagination)
-- Debugging migrations and database permissions
+- Full-stack development (React + Django REST Framework)  
+- Relational database design with PostgreSQL  
+- Handling schema changes (CharField → ForeignKey)  
+- API design and validation  
+- UI state management for complex workflows  
+- Performance optimization (debouncing, pagination)  
+- Drag-and-drop interactions with pointer events  
+- Debugging migrations and database permissions  
 
 ---
 
@@ -56,7 +58,7 @@ https://clinic-scheduler-seven.vercel.app/
 Frontend: React, Tailwind CSS, Material UI  
 Backend: Django, Django REST Framework  
 Database: PostgreSQL  
-Deployment: Render
+Deployment: Vercel (frontend), Render (backend)  
 
 ---
 
@@ -72,6 +74,7 @@ pip install -r requirements.txt
 ```
 
 ### Database
+
 ```python
 DATABASES = {
     "default": {
@@ -86,6 +89,7 @@ DATABASES = {
 ```
 
 ### Run
+
 ```bash
 python manage.py migrate
 python manage.py seed_demo --reset-appointments
@@ -97,14 +101,14 @@ python manage.py runserver
 ## 🔑 Demo Credentials
 
 Username: admin  
-Password: Admin123!
+Password: Admin123!  
 
 ---
 
 ## 🧠 What I Learned
 
-- Designing scalable relational data models
-- Managing schema migrations and breaking changes
-- Building intuitive UI tied to backend constraints
-- Implementing authentication and multi-tenant logic
-- Debugging database and deployment issues
+- Designing scalable relational data models  
+- Managing schema migrations and breaking changes  
+- Building intuitive UI tied to backend constraints  
+- Implementing authentication and multi-tenant logic  
+- Debugging database and deployment issues  
