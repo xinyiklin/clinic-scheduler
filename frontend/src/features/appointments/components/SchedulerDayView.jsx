@@ -174,14 +174,14 @@ export default function SchedulerDayView({
           return (
             <div
               key={slot.value}
-              className="flex min-h-[44px] border-b border-slate-200 last:border-b-0"
+              className="flex min-h-[28px] border-b border-slate-200 last:border-b-0"
             >
-              <div className="w-[100px] shrink-0 select-none border-r border-slate-200 bg-slate-50 px-2 py-2 text-sm text-slate-600">
+              <div className="w-[100px] shrink-0 select-none border-r border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-600">
                 {slot.label}
               </div>
 
               <div
-                className="flex flex-1 gap-1 px-2 py-1"
+                className="flex flex-1 gap-1 px-2 py-0.5"
                 onDoubleClick={() => onSlotDoubleClick?.(selectedDate, slot.time24)}
               >
                 {slotAppointments.map((a) => {
