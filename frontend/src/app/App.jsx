@@ -219,10 +219,10 @@ function App() {
     });
   };
 
-  const handleDropAppointment = (date, time24, dragged) => {
+  const handleDropAppointment = async (date, time24, dragged) => {
     if (!dragged) return;
 
-    const payload = {
+    const buildPayload = (overrides = {}) => ({
       patient: dragged.patient_id,
       doctor_name: dragged.doctor_name,
       appointment_time: `${date}T${time24}`,
@@ -230,12 +230,38 @@ function App() {
       status: dragged.status,
       appointment_type: dragged.appointment_type,
       facility: dragged.facility,
-    };
-
-    moveMutation.mutate({
-      id: dragged.id,
-      data: payload,
+      ...overrides,
     });
+
+    const payload = buildPayload();
+
+    try {
+      await moveMutation.mutateAsync({
+        id: dragged.id,
+        data: payload,
+      });
+    } catch (err) {
+      const duplicateError = getDuplicateDayAppointmentError(err);
+
+      if (!duplicateError) {
+        return;
+      }
+
+      openConfirmDialog({
+        title: "Possible Double Booking",
+        message:
+          "This patient already has an appointment on this date. Moving this appointment may result in a double booking. Do you want to proceed anyway?",
+        confirmText: "Proceed Anyway",
+        cancelText: "Cancel",
+        variant: "warning",
+        onConfirm: async () => {
+          await moveMutation.mutateAsync({
+            id: dragged.id,
+            data: buildPayload({ allow_same_day_double_book: true }),
+          });
+        },
+      });
+    }
   };
 
   const formattedAppointments = useMemo(
