@@ -1,4 +1,4 @@
-import { apiRequest, getAuthHeaders } from "../../../shared/api/client";
+import { apiRequest } from "../../../shared/api/client";
 
 export function searchPatients({
   search,
