@@ -4,22 +4,16 @@ from .models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
-    full_name = serializers.SerializerMethodField()
-
     class Meta:
         model = User
         fields = [
             "id",
             "username",
             "email",
-            "first_name",
             "last_name",
-            "full_name",
+            "first_name",
             "phone_number",
         ]
-
-    def get_full_name(self, obj):
-        return obj.get_full_name() or obj.username
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -31,8 +25,8 @@ class RegisterSerializer(serializers.ModelSerializer):
             "username",
             "email",
             "password",
-            "first_name",
             "last_name",
+            "first_name",
             "phone_number",
         ]
 

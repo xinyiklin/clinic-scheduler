@@ -14,14 +14,9 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
-    full_name = serializers.SerializerMethodField()
-
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "full_name", "email"]
-
-    def get_full_name(self, obj):
-        return obj.get_full_name() or obj.username
+        fields = ["id", "username", "last_name", "first_name", "email"]
 
 
 class FacilitySerializer(serializers.ModelSerializer):

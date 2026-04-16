@@ -317,7 +317,11 @@ function App() {
         ].join(" ")}
       >
         <AppNavbar
-          fullName={currentUser?.full_name || currentUser?.username || "User"}
+          fullName={
+            currentUser?.first_name && currentUser?.last_name
+              ? `${currentUser.first_name} ${currentUser.last_name}`
+              : currentUser?.username || "User"
+          }
           onLogout={handleLogout}
           onOpenPatientSearch={() => {
             patientFlow.search.open("navbar");

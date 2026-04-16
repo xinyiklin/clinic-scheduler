@@ -1,13 +1,5 @@
 import { apiRequest, getAuthHeaders } from "../../../shared/api/client";
 
-export function fetchCurrentUser() {
-  return apiRequest("/api/facilities/me/", {
-    headers: {
-      ...getAuthHeaders(),
-    },
-  });
-}
-
 export function fetchPhysicians() {
   return apiRequest("/api/facilities/physicians/", {
     headers: {

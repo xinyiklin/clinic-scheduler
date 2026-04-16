@@ -3,16 +3,12 @@ from django.urls import path
 from .views import (
     AppointmentStatusListView,
     AppointmentTypeListView,
-    CurrentUserView,
     PatientGendersView,
     PhysicianListView,
 )
 
 urlpatterns = [
-    # User and Staffing endpoints
-    path("me/", CurrentUserView.as_view(), name="current-user"),
     path("physicians/", PhysicianListView.as_view(), name="physician-list"),
-    # Configuration endpoints (Specific to the Facility)
     path(
         "appointment-statuses/",
         AppointmentStatusListView.as_view(),
