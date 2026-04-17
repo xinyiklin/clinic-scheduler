@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { searchPatients } from "../api/patients";
 import { parsePatientQuery } from "../utils/parsePatientQuery";
-import { format, parseISO } from "date-fns";
 import { formatDOB } from "../../../shared/utils/dateTime";
 
 export default function PatientSearchField({

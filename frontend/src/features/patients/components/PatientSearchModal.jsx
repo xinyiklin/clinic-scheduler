@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import dayjs from "dayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { searchPatients } from "../api/patients";
+import { formatDOB } from "../../../shared/utils/dateTime";
+
 import { X } from "lucide-react";
+
+import dayjs from "dayjs";
 import useDraggableModal from "../../../shared/hooks/useDraggableModal";
 
 const PAGE_SIZE = 10;
@@ -265,7 +268,7 @@ export default function PatientSearchModal({
                           {`${patient.last_name}, ${patient.first_name}`}
                         </td>
                         <td className="select-none px-4 py-3 text-slate-700">
-                          {patient.date_of_birth}
+                          {formatDOB(patient.date_of_birth)}
                         </td>
                         <td className="select-none px-4 py-3 text-slate-700">
                           {patient.chart_number || "—"}
