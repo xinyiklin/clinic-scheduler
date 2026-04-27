@@ -59,6 +59,68 @@ class DemoLoginViewTests(TestCase):
         self.assertEqual(response.data["detail"], "Demo mode is disabled.")
 
 
+class CookieAuthCsrfTests(TestCase):
+    def setUp(self):
+        self.client = APIClient(enforce_csrf_checks=True)
+        self.user = User.objects.create_user(
+            username="csrf_user",
+            password="testpass123",
+            email="csrf@example.com",
+        )
+
+    def get_csrf_token(self):
+        response = self.client.get("/v1/users/csrf/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("csrfToken", response.json())
+        return response.json()["csrfToken"]
+
+    def test_csrf_endpoint_sets_readable_token(self):
+        token = self.get_csrf_token()
+
+        self.assertTrue(token)
+        self.assertIn("csrftoken", self.client.cookies)
+
+    def test_refresh_cookie_requires_csrf_token(self):
+        csrf_token = self.get_csrf_token()
+        login_response = self.client.post(
+            "/v1/users/token/",
+            {"username": "csrf_user", "password": "testpass123"},
+            format="json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(login_response.status_code, 200)
+        self.assertIn("careflow_refresh", login_response.cookies)
+
+        blocked_response = self.client.post(
+            "/v1/users/token/refresh/",
+            {},
+            format="json",
+        )
+        self.assertEqual(blocked_response.status_code, 403)
+
+        response = self.client.post(
+            "/v1/users/token/refresh/",
+            {},
+            format="json",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("access", response.data)
+        self.assertNotIn("refresh", response.data)
+
+    def test_logout_requires_csrf_token(self):
+        csrf_token = self.get_csrf_token()
+
+        blocked_response = self.client.post("/v1/users/logout/")
+        self.assertEqual(blocked_response.status_code, 403)
+
+        response = self.client.post(
+            "/v1/users/logout/",
+            HTTP_X_CSRFTOKEN=csrf_token,
+        )
+        self.assertEqual(response.status_code, 204)
+
+
 class RegisterViewTests(TestCase):
     def setUp(self):
         self.client = APIClient()

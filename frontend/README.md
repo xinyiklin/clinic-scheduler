@@ -144,6 +144,10 @@ VITE_DEMO_MODE=true
 
 The backend must allow the frontend origin in CORS and CSRF settings.
 
+`vercel.json` includes a single-page app fallback rewrite so direct visits or
+browser refreshes on routes such as `/schedule`, `/documents`, or
+`/admin/facility` serve `index.html` and let React Router handle the route.
+
 ## Safety
 
 CareFlow uses synthetic demo data only. Do not enter real patient data, PHI,

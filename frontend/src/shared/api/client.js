@@ -4,6 +4,8 @@ const PRODUCTION_API_HOST = "api.careflow.xinyiklin.com";
 const PRODUCTION_API_BASE = `https://${PRODUCTION_API_HOST}`;
 export const API_PREFIX = "/v1";
 let inMemoryAccessToken = null;
+let inMemoryCsrfToken = null;
+let csrfTokenRequest = null;
 
 function normalizeApiBase(rawBase) {
   if (!rawBase) return rawBase;
@@ -68,7 +70,71 @@ export function setAuthTokens({ access = null, refresh = null } = {}) {
   setStoredTokens({ access, refresh });
 }
 
+function isUnsafeMethod(method = "GET") {
+  return !["GET", "HEAD", "OPTIONS", "TRACE"].includes(method.toUpperCase());
+}
+
+function getCookie(name) {
+  if (typeof document === "undefined") return "";
+
+  return (
+    document.cookie
+      .split(";")
+      .map((cookie) => cookie.trim())
+      .find((cookie) => cookie.startsWith(`${name}=`))
+      ?.slice(name.length + 1) || ""
+  );
+}
+
+async function ensureCsrfToken() {
+  if (inMemoryCsrfToken) {
+    return inMemoryCsrfToken;
+  }
+
+  const existingCookieToken = decodeURIComponent(getCookie("csrftoken"));
+  if (existingCookieToken) {
+    inMemoryCsrfToken = existingCookieToken;
+    return inMemoryCsrfToken;
+  }
+
+  if (!csrfTokenRequest) {
+    csrfTokenRequest = fetch(`${API_BASE}${API_PREFIX}/users/csrf/`, {
+      method: "GET",
+      credentials: "include",
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Unable to initialize CSRF protection.");
+        }
+
+        const data = await response.json();
+        const cookieToken = decodeURIComponent(getCookie("csrftoken"));
+        inMemoryCsrfToken = data.csrfToken || cookieToken;
+
+        if (!inMemoryCsrfToken) {
+          throw new Error("CSRF token was not returned.");
+        }
+
+        return inMemoryCsrfToken;
+      })
+      .finally(() => {
+        csrfTokenRequest = null;
+      });
+  }
+
+  return csrfTokenRequest;
+}
+
+async function buildCsrfHeaders(method, customHeaders = {}) {
+  if (!isUnsafeMethod(method) || customHeaders["X-CSRFToken"]) {
+    return {};
+  }
+
+  return { "X-CSRFToken": await ensureCsrfToken() };
+}
+
 async function requestNewAccessToken() {
+  const csrfHeaders = await buildCsrfHeaders("POST");
   const response = await fetch(
     `${API_BASE}${API_PREFIX}/users/token/refresh/`,
     {
@@ -76,6 +142,7 @@ async function requestNewAccessToken() {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        ...csrfHeaders,
       },
       body: JSON.stringify({}),
     }
@@ -90,6 +157,10 @@ async function requestNewAccessToken() {
   setStoredTokens({ access: data.access });
 
   return data.access;
+}
+
+export async function restoreAuthSession() {
+  return requestNewAccessToken();
 }
 
 function buildUrl(path, params = {}) {
@@ -128,6 +199,8 @@ export async function apiRequest(path, options = {}, retry = true) {
   const accessToken = getStoredAccessToken();
   const isFormData =
     typeof FormData !== "undefined" && restOptions.body instanceof FormData;
+  const method = restOptions.method || "GET";
+  const csrfHeaders = await buildCsrfHeaders(method, customHeaders);
 
   const response = await fetch(url, {
     ...restOptions,
@@ -135,6 +208,7 @@ export async function apiRequest(path, options = {}, retry = true) {
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...csrfHeaders,
       ...customHeaders,
     },
   });
@@ -194,12 +268,15 @@ export async function apiBlobRequest(path, options = {}, retry = true) {
   const { params, headers: customHeaders = {}, ...restOptions } = options;
   const url = buildUrl(path, params);
   const accessToken = getStoredAccessToken();
+  const method = restOptions.method || "GET";
+  const csrfHeaders = await buildCsrfHeaders(method, customHeaders);
 
   const response = await fetch(url, {
     ...restOptions,
     credentials: "include",
     headers: {
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...csrfHeaders,
       ...customHeaders,
     },
   });
@@ -248,10 +325,15 @@ export async function apiBlobRequest(path, options = {}, retry = true) {
 
 export function logoutUser() {
   clearStoredTokens();
-  fetch(`${API_BASE}${API_PREFIX}/users/logout/`, {
-    method: "POST",
-    credentials: "include",
-  }).catch(() => {});
+  ensureCsrfToken()
+    .then((csrfToken) =>
+      fetch(`${API_BASE}${API_PREFIX}/users/logout/`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "X-CSRFToken": csrfToken },
+      })
+    )
+    .catch(() => {});
   window.dispatchEvent(new Event("auth:logout"));
 }
 

@@ -1,6 +1,9 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
+from django.middleware.csrf import get_token
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -35,7 +38,6 @@ def clear_refresh_cookie(response):
     response.delete_cookie(
         REFRESH_COOKIE_NAME,
         path=REFRESH_COOKIE_PATH,
-        secure=not settings.DEBUG,
         samesite="None" if not settings.DEBUG else "Lax",
     )
     return response
@@ -45,6 +47,12 @@ def health_check(request):
     return JsonResponse({"status": "ok"})
 
 
+@ensure_csrf_cookie
+def csrf_token(request):
+    return JsonResponse({"csrfToken": get_token(request)})
+
+
+@method_decorator(csrf_protect, name="dispatch")
 class CookieTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
@@ -52,6 +60,7 @@ class CookieTokenObtainPairView(TokenObtainPairView):
         return set_refresh_cookie(response, refresh_token)
 
 
+@method_decorator(csrf_protect, name="dispatch")
 class CookieTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         data = (
@@ -72,6 +81,7 @@ class CookieTokenRefreshView(TokenRefreshView):
         return set_refresh_cookie(response, refresh_token)
 
 
+@method_decorator(csrf_protect, name="dispatch")
 class LogoutView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -120,6 +130,7 @@ class UserPreferenceView(APIView):
         return Response(serializer.data)
 
 
+@method_decorator(csrf_protect, name="dispatch")
 class DemoLoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
