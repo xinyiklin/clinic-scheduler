@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { AlertCircle, FileText, Loader2 } from "lucide-react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, FileText } from "lucide-react";
 
 import { Button } from "../../../shared/components/ui";
 import { getErrorMessage } from "../../../shared/utils/errors";
@@ -40,24 +40,31 @@ export default function DocumentPreviewPane({
   document,
   facilityId,
   onDownload,
+  showDocumentHeader = true,
+  flush = false,
 }) {
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState(null);
+  const objectUrlRef = useRef("");
 
   useEffect(() => {
     let isCancelled = false;
-    let objectUrl = "";
-
-    setPreview(null);
+    let pendingObjectUrl = "";
     setError("");
 
     if (!document) {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = "";
+      setPreview(null);
       setStatus("idle");
       return undefined;
     }
 
     if (!facilityId && !document.url) {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = "";
+      setPreview(null);
       setStatus("error");
       setError("Select a facility before previewing this document.");
       return undefined;
@@ -73,16 +80,22 @@ export default function DocumentPreviewPane({
         });
         if (isCancelled) return;
 
-        objectUrl = result.blob ? URL.createObjectURL(result.blob) : "";
+        pendingObjectUrl = result.blob ? URL.createObjectURL(result.blob) : "";
+        if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = pendingObjectUrl;
+        pendingObjectUrl = "";
         setPreview({
           contentType: result.contentType || "",
           filename: result.filename || document.name,
           isExternal: result.isExternal,
-          url: objectUrl || result.url,
+          url: objectUrlRef.current || result.url,
         });
         setStatus("ready");
       } catch (loadError) {
         if (isCancelled) return;
+        if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = "";
+        setPreview(null);
         setError(
           getErrorMessage(loadError, "Failed to load document preview.")
         );
@@ -94,9 +107,16 @@ export default function DocumentPreviewPane({
 
     return () => {
       isCancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (pendingObjectUrl) URL.revokeObjectURL(pendingObjectUrl);
     };
   }, [document, facilityId]);
+
+  useEffect(
+    () => () => {
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+    },
+    []
+  );
 
   const previewKind = useMemo(
     () =>
@@ -110,24 +130,27 @@ export default function DocumentPreviewPane({
   );
 
   if (!document) {
-    return <NoDocumentPreview />;
+    return (
+      <NoDocumentPreview
+        showDocumentHeader={showDocumentHeader}
+        flush={flush}
+      />
+    );
   }
 
-  if (status === "loading") {
+  if (status === "loading" && !preview?.url) {
     return (
-      <PreviewShell>
-        <EmptyPreview
-          icon={<Loader2 className="h-6 w-6 animate-spin" />}
-          title="Loading preview"
-          message={document.name}
-        />
-      </PreviewShell>
+      <NoDocumentPreview
+        documentName={document.name}
+        showDocumentHeader={showDocumentHeader}
+        flush={flush}
+      />
     );
   }
 
   if (status === "error") {
     return (
-      <PreviewShell>
+      <PreviewShell flush={flush}>
         <EmptyPreview
           icon={<AlertCircle className="h-6 w-6" />}
           title="Preview unavailable"
@@ -139,7 +162,7 @@ export default function DocumentPreviewPane({
 
   if (!preview?.url) {
     return (
-      <PreviewShell>
+      <PreviewShell flush={flush}>
         <EmptyPreview
           icon={<FileText className="h-6 w-6" />}
           title="Preview unavailable"
@@ -153,23 +176,26 @@ export default function DocumentPreviewPane({
     return (
       <Suspense
         fallback={
-          <PreviewShell>
-            <EmptyPreview
-              icon={<Loader2 className="h-6 w-6 animate-spin" />}
-              title="Loading PDF viewer"
-              message={preview.filename || document.name}
-            />
-          </PreviewShell>
+          <NoDocumentPreview
+            documentName={preview.filename || document.name}
+            showDocumentHeader={showDocumentHeader}
+            flush={flush}
+          />
         }
       >
-        <PdfPreviewViewer file={preview.url} filename={preview.filename} />
+        <PdfPreviewViewer
+          file={preview.url}
+          filename={preview.filename}
+          showDocumentHeader={showDocumentHeader}
+          flush={flush}
+        />
       </Suspense>
     );
   }
 
   if (previewKind === "image") {
     return (
-      <PreviewShell>
+      <PreviewShell flush={flush}>
         <img
           alt={`Preview of ${document.name}`}
           className="h-full w-full rounded-[1.15rem] object-contain"
@@ -180,7 +206,7 @@ export default function DocumentPreviewPane({
   }
 
   return (
-    <PreviewShell>
+    <PreviewShell flush={flush}>
       <EmptyPreview
         icon={<FileText className="h-6 w-6" />}
         title={
@@ -200,29 +226,50 @@ export default function DocumentPreviewPane({
   );
 }
 
-function PreviewShell({ children }) {
+function PreviewShell({ children, flush }) {
   return (
-    <div className="flex min-h-0 flex-1 rounded-[1.35rem] border border-cf-border bg-gradient-to-b from-cf-surface-soft to-cf-surface p-3 shadow-[var(--shadow-panel)]">
-      <div className="min-h-[600px] flex-1 overflow-hidden rounded-[1.2rem] border border-cf-border bg-cf-surface shadow-inner">
+    <div
+      className={[
+        "relative flex min-h-0 flex-1 bg-gradient-to-b from-cf-surface-soft to-cf-surface",
+        flush
+          ? ""
+          : "rounded-[1.35rem] border border-cf-border p-3 shadow-[var(--shadow-panel)]",
+      ].join(" ")}
+    >
+      <div
+        className={[
+          "min-h-[420px] flex-1 overflow-hidden bg-cf-surface xl:min-h-0",
+          flush ? "" : "rounded-[1.2rem] border border-cf-border shadow-inner",
+        ].join(" ")}
+      >
         {children}
       </div>
     </div>
   );
 }
 
-function NoDocumentPreview() {
+function NoDocumentPreview({ documentName = "", showDocumentHeader, flush }) {
   return (
-    <div className="flex min-h-[600px] flex-1 flex-col overflow-hidden rounded-[1.2rem] border border-cf-border bg-cf-surface shadow-[var(--shadow-panel)]">
-      <div className="flex shrink-0 items-center justify-between border-b border-cf-border bg-cf-surface px-3 py-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-cf-text">
-            No document selected
-          </p>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cf-text-subtle">
-            CareFlow viewer
-          </p>
+    <div
+      className={[
+        "flex min-h-[420px] flex-1 flex-col overflow-hidden bg-cf-surface xl:min-h-0",
+        flush
+          ? ""
+          : "rounded-[1.2rem] border border-cf-border shadow-[var(--shadow-panel)]",
+      ].join(" ")}
+    >
+      {showDocumentHeader ? (
+        <div className="flex shrink-0 items-center justify-between border-b border-cf-border bg-cf-surface px-3 py-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-cf-text">
+              {documentName || "No document selected"}
+            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cf-text-subtle">
+              CareFlow viewer
+            </p>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="flex min-h-0 flex-1 items-center justify-center bg-[color-mix(in_srgb,var(--color-cf-surface-muted)_76%,var(--color-cf-surface))] px-5 text-center">
         <div>
@@ -230,10 +277,12 @@ function NoDocumentPreview() {
             <FileText className="h-6 w-6" />
           </div>
           <p className="mt-3 text-sm font-semibold text-cf-text">
-            No document selected
+            {documentName || "No document selected"}
           </p>
           <p className="mt-1 max-w-[220px] text-xs leading-relaxed text-cf-text-muted">
-            Choose a document to preview it here.
+            {documentName
+              ? "The preview will appear here."
+              : "Choose a document to preview it here."}
           </p>
         </div>
       </div>
