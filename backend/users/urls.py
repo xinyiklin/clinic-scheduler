@@ -8,10 +8,12 @@ from .views import (
     RegisterView,
     UserPreferenceView,
     UserProfileView,
+    csrf_token,
     health_check,
 )
 
 urlpatterns = [
+    path("csrf/", csrf_token, name="csrf_token"),
     path("token/", CookieTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("token/refresh/", CookieTokenRefreshView.as_view(), name="token_refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),

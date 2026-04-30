@@ -204,6 +204,10 @@ SESSION_COOKIE_SECURE = not DEBUG
 
 CSRF_COOKIE_SAMESITE = "None" if not DEBUG else "Lax"
 CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_DOMAIN = os.environ.get(
+    "CSRF_COOKIE_DOMAIN",
+    None if DEBUG else ".careflow.xinyiklin.com",
+)
 
 # --- SECURITY HEADERS ---
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

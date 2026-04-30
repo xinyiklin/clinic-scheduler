@@ -5,7 +5,11 @@ import {
   useEffect,
   useState,
 } from "react";
-import { logoutUser, setAuthTokens } from "../../shared/api/client";
+import {
+  logoutUser,
+  restoreAuthSession,
+  setAuthTokens,
+} from "../../shared/api/client";
 import {
   login as loginApi,
   demoLogin as demoLoginApi,
@@ -39,6 +43,19 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
   }, [logout]);
+
+  const restoreCurrentSession = useCallback(async () => {
+    try {
+      await restoreAuthSession();
+      await fetchCurrentUser();
+    } catch (err) {
+      if (err?.status && err.status !== 401) {
+        console.error("Failed to restore session:", err);
+      }
+      setUser(null);
+      setLoading(false);
+    }
+  }, [fetchCurrentUser]);
 
   const login = useCallback(
     async ({ username, password }) => {
@@ -79,8 +96,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    fetchCurrentUser();
-  }, [fetchCurrentUser]);
+    restoreCurrentSession();
+  }, [restoreCurrentSession]);
 
   return (
     <AuthContext.Provider
