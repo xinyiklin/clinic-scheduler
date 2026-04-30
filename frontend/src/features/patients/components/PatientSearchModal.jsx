@@ -181,7 +181,7 @@ export default function PatientSearchModal({
       <div
         ref={modalRef}
         style={modalStyle}
-        className="fixed flex max-h-[min(92dvh,780px)] w-full max-w-[76rem] flex-col overflow-hidden rounded-2xl border border-cf-border bg-cf-page-bg shadow-[var(--shadow-panel-lg)]"
+        className="fixed flex max-h-[min(92dvh,780px)] w-full max-w-[76rem] flex-col overflow-hidden rounded-2xl border border-cf-border bg-cf-surface shadow-[var(--shadow-panel-lg)]"
         onClick={(e) => e.stopPropagation()}
       >
         <PatientSearchHeader
@@ -199,8 +199,8 @@ export default function PatientSearchModal({
           onSmartQueryChange={setSmartQuery}
         />
 
-        <div className="relative z-10 grid min-h-[26rem] flex-1 gap-0 bg-cf-page-bg px-5 pb-4 pt-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="min-h-0 overflow-hidden rounded-t-2xl border border-cf-border bg-cf-surface lg:rounded-l-2xl lg:rounded-tr-none lg:border-r-0">
+        <div className="relative z-10 grid min-h-[26rem] flex-1 gap-0 border-y border-cf-border bg-cf-surface lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-h-0 overflow-hidden bg-cf-surface">
             <MatchQueueHeader
               canSearch={canSearch}
               loading={loading}

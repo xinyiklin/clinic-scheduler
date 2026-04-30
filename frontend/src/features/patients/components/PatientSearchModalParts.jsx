@@ -40,27 +40,14 @@ function patientDetailLine(patient) {
   return details.join(" · ") || "No demographic details";
 }
 
-export function SearchMetric({ label, value }) {
-  return (
-    <div className="rounded-xl border border-cf-border bg-cf-surface px-3 py-2">
-      <div className="text-[11px] font-semibold uppercase text-cf-text-subtle">
-        {label}
-      </div>
-      <div className="mt-1 truncate text-sm font-semibold text-cf-text">
-        {value}
-      </div>
-    </div>
-  );
-}
-
 function SelectedField({ icon: Icon, label, value }) {
   const displayValue = value || "—";
 
   return (
-    <div className="flex min-w-0 items-start gap-2 rounded-xl border border-cf-border bg-cf-surface-muted/45 px-3 py-2">
+    <div className="flex min-w-0 items-start gap-2 border-t border-cf-border py-2.5 first:border-t-0 first:pt-0 last:pb-0">
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-cf-text-subtle" />
       <div className="min-w-0">
-        <div className="text-[11px] font-semibold uppercase text-cf-text-subtle">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cf-text-subtle">
           {label}
         </div>
         <div
@@ -189,13 +176,13 @@ export function SelectedPatientPanel({
 }) {
   if (!patient) {
     return (
-      <aside className="rounded-b-2xl border-x border-b border-cf-border bg-cf-surface px-5 py-5 lg:rounded-bl-none lg:rounded-r-2xl lg:border-y lg:border-l">
+      <aside className="border-t border-cf-border bg-cf-surface px-5 py-4 lg:border-t-0 lg:border-l">
         <div className="text-xs font-semibold uppercase text-cf-text-subtle">
           Chart snapshot
         </div>
-        <div className="mt-3 rounded-2xl border border-cf-border bg-cf-surface-muted/55 p-4 shadow-[var(--shadow-panel)]">
+        <div className="mt-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-cf-border bg-cf-surface text-cf-text-subtle">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cf-border bg-cf-surface-muted/45 text-cf-text-subtle">
               <FileText className="h-5 w-5" />
             </div>
             <div className="min-w-0">
@@ -208,7 +195,7 @@ export function SelectedPatientPanel({
             </div>
           </div>
 
-          <div className="mt-4 space-y-2">
+          <div className="mt-4">
             <SelectedField icon={CalendarDays} label="DOB" value="" />
             <SelectedField icon={Hash} label="MRN" value="" />
             <SelectedField icon={Phone} label="Phone" value="" />
@@ -236,11 +223,11 @@ export function SelectedPatientPanel({
   }
 
   return (
-    <aside className="rounded-b-2xl border-x border-b border-cf-border bg-cf-surface px-5 py-5 lg:rounded-bl-none lg:rounded-r-2xl lg:border-y lg:border-l">
+    <aside className="border-t border-cf-border bg-cf-surface px-5 py-4 lg:border-t-0 lg:border-l">
       <div className="text-xs font-semibold uppercase text-cf-text-subtle">
         Chart snapshot
       </div>
-      <div className="mt-3 rounded-2xl border border-cf-border bg-cf-surface-muted/55 p-4 shadow-[var(--shadow-panel)]">
+      <div className="mt-3">
         <div className="flex items-center gap-3">
           <PatientAvatar patient={patient} selected />
           <div className="min-w-0">
@@ -251,7 +238,7 @@ export function SelectedPatientPanel({
           </div>
         </div>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-4">
           <SelectedField
             icon={CalendarDays}
             label="DOB"

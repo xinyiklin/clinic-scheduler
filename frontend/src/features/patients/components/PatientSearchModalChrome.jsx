@@ -1,7 +1,19 @@
 import { ChevronLeft, ChevronRight, Search, UserPlus, X } from "lucide-react";
 
-import { SearchMetric } from "./PatientSearchModalParts";
 import { Button, Input, Notice } from "../../../shared/components/ui";
+
+function SearchMeta({ label, value }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cf-text-subtle">
+        {label}
+      </div>
+      <div className="mt-0.5 truncate text-sm font-semibold text-cf-text">
+        {value}
+      </div>
+    </div>
+  );
+}
 
 export function PatientSearchHeader({
   dragHandleProps,
@@ -55,7 +67,7 @@ export function PatientSearchInputPanel({
   onSmartQueryChange,
 }) {
   return (
-    <div className="bg-cf-page-bg px-5 pt-4">
+    <div className="bg-cf-surface px-5 py-4">
       {error && (
         <Notice tone="danger" title="Patient search failed">
           {error}
@@ -63,7 +75,7 @@ export function PatientSearchInputPanel({
       )}
 
       <div className={error ? "mt-3" : ""}>
-        <div className="grid gap-3 rounded-2xl border border-cf-border bg-cf-surface p-3 shadow-[var(--shadow-panel)] lg:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="grid gap-3 border-y border-cf-border py-3 lg:grid-cols-[minmax(0,1fr)_220px]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-cf-text-subtle" />
             <Input
@@ -72,14 +84,14 @@ export function PatientSearchInputPanel({
               onChange={(event) => onSmartQueryChange(event.target.value)}
               aria-label="Smart patient search"
               placeholder="Name, MRN, DOB, or phone"
-              className="h-12 rounded-xl border-cf-border bg-cf-surface-muted/45 pl-10 pr-4 text-sm font-semibold focus:border-cf-border-strong focus:ring-0"
+              className="h-11 rounded-xl border-cf-border bg-cf-surface pl-10 pr-4 text-sm font-semibold focus:border-cf-border-strong focus:ring-0"
               autoFocus
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <SearchMetric label="Status" value={searchStatusLabel} />
-            <SearchMetric label="Page" value={`${page} / ${totalPages}`} />
+          <div className="grid grid-cols-2 gap-4 border-cf-border lg:border-l lg:pl-4">
+            <SearchMeta label="Status" value={searchStatusLabel} />
+            <SearchMeta label="Page" value={`${page} / ${totalPages}`} />
           </div>
         </div>
       </div>
