@@ -3,9 +3,11 @@ import { Plus, Siren, Star, Trash2 } from "lucide-react";
 
 import { Badge, Button, Input } from "../../../../shared/components/ui";
 import {
+  formatPhoneDisplay,
   formatPhoneInput,
   getPhoneInputDigits,
   handleFormattedInputDeletion,
+  PHONE_INPUT_PLACEHOLDER,
   validatePhoneNumber,
 } from "../../utils/contactValidation";
 import InlineEditField from "./InlineEditField";
@@ -119,9 +121,12 @@ function ContactRow({
           label="Phone"
           value={contact.phone_number}
           displayValue={
-            contact.phone_number ? formatPhoneInput(contact.phone_number) : ""
+            contact.phone_number ? formatPhoneDisplay(contact.phone_number) : ""
           }
-          placeholder="(555)555-1234"
+          displayTitle={
+            contact.phone_number ? formatPhoneDisplay(contact.phone_number) : ""
+          }
+          placeholder={PHONE_INPUT_PLACEHOLDER}
           inputMode="numeric"
           sanitizeInput={formatPhoneInput}
           onFormattedKeyDown={(event, updateDraft) =>
@@ -208,7 +213,7 @@ function AddContactRow({ index, saving, onSave, onCancel }) {
               updateDraft("phone_number", nextValue)
             )
           }
-          placeholder="(555)555-1234"
+          placeholder={PHONE_INPUT_PLACEHOLDER}
           inputMode="numeric"
           className="h-9 py-0"
         />

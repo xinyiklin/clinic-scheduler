@@ -2,15 +2,18 @@ import { AlertTriangle, ClipboardList, Pencil, Pill, Plus } from "lucide-react";
 
 import { Badge, Button } from "../../../shared/components/ui";
 import { formatCoverageOrder, formatDateTime } from "./PatientHubSections";
-import { getPatientChartName } from "./PatientHubSidebar";
+import {
+  getPatientChartName,
+  getPatientFullName,
+} from "../utils/patientDisplay";
 
 export function buildAppointmentPatientSnapshot(patient) {
   if (!patient) return null;
 
   return {
     id: patient.id,
-    full_name: patient.full_name || getPatientChartName(patient),
-    display_name: patient.display_name || getPatientChartName(patient),
+    full_name: getPatientFullName(patient),
+    display_name: getPatientChartName(patient),
     date_of_birth: patient.date_of_birth || "",
     chart_number: patient.chart_number || "",
   };
