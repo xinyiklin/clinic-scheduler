@@ -63,6 +63,12 @@ npm install
 npm run dev
 ```
 
+The Vite dev server is fixed to `http://localhost:5173` with `strictPort`.
+For local QA, use that port instead of falling back to a different one. If
+`5173` is already occupied, confirm whether the CareFlow frontend is running
+there and use it if so; otherwise stop the stale process and rerun
+`npm run dev`.
+
 The default local API base is `http://localhost:8000`; requests are versioned
 under `/v1`. If the backend is elsewhere, create `frontend/.env.local`:
 

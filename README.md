@@ -120,6 +120,12 @@ Start the Vite dev server:
 npm run dev
 ```
 
+The frontend dev server is expected to use `http://localhost:5173`. Vite is
+configured with `strictPort`, so do not switch to another port for normal
+CareFlow QA. If `5173` is occupied, first check whether the CareFlow frontend is
+already running there and use it if it is; otherwise stop the stale process and
+restart with `npm run dev`.
+
 ## Demo Credentials
 
 After running `python manage.py seed_demo`:
