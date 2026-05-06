@@ -5,6 +5,7 @@ import type {
   ApiParamValue,
   EntityId,
 } from "../../../shared/api/types";
+import type { ApiRecord, AppointmentLike } from "../../../shared/types/domain";
 
 type AppointmentEditSessionStatus = "active" | "available" | "occupied";
 
@@ -28,13 +29,17 @@ type FetchAppointmentsParams = {
   patientId?: EntityId | null;
 };
 
+export type AppointmentHeatmapResponse = {
+  counts?: Record<string, number>;
+};
+
 export function fetchAppointments({
   facilityId,
   date,
   dateTo,
   patientId,
 }: FetchAppointmentsParams = {}) {
-  return apiRequest("/appointments/", {
+  return apiRequest<AppointmentLike[]>("/appointments/", {
     params: {
       facility_id: facilityId,
       date,
@@ -51,7 +56,7 @@ export function fetchAppointmentHeatmap({
   facilityId?: EntityId | null;
   month?: ApiParamValue;
 } = {}) {
-  return apiRequest("/appointments/heatmap/", {
+  return apiRequest<AppointmentHeatmapResponse>("/appointments/heatmap/", {
     params: {
       facility_id: facilityId,
       month,
@@ -63,7 +68,7 @@ export function createAppointment(
   facilityId: EntityId | null | undefined,
   data: ApiPayload
 ) {
-  return apiRequest("/appointments/", {
+  return apiRequest<AppointmentLike>("/appointments/", {
     method: "POST",
     params: { facility_id: facilityId },
     body: JSON.stringify(data),
@@ -75,7 +80,7 @@ export function updateAppointment(
   id: EntityId,
   data: ApiPayload
 ) {
-  return apiRequest(`/appointments/${id}/`, {
+  return apiRequest<AppointmentLike>(`/appointments/${id}/`, {
     method: "PUT",
     params: { facility_id: facilityId },
     body: JSON.stringify(data),
@@ -86,7 +91,7 @@ export function deleteAppointment(
   facilityId: EntityId | null | undefined,
   id: EntityId
 ) {
-  return apiRequest(`/appointments/${id}/`, {
+  return apiRequest<ApiRecord>(`/appointments/${id}/`, {
     method: "DELETE",
     params: { facility_id: facilityId },
   });
@@ -96,7 +101,7 @@ export function fetchAppointmentHistory(
   facilityId: EntityId | null | undefined,
   id: EntityId
 ) {
-  return apiRequest(`/appointments/${id}/history/`, {
+  return apiRequest<ApiRecord[]>(`/appointments/${id}/history/`, {
     params: { facility_id: facilityId },
   });
 }
@@ -133,7 +138,7 @@ export function releaseAppointmentEditSession(
   facilityId: EntityId | null | undefined,
   id: EntityId | null | undefined
 ) {
-  return apiRequest(`/appointments/${id}/edit-session/`, {
+  return apiRequest<ApiRecord>(`/appointments/${id}/edit-session/`, {
     method: "DELETE",
     params: { facility_id: facilityId },
   });

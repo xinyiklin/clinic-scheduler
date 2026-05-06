@@ -1,5 +1,22 @@
 import type { EntityId } from "../api/types";
 
+import type { AppointmentBlockDisplay } from "../constants/appointmentBlockDisplay";
+
+export type ApiRecord = Record<string, unknown>;
+
+export type ThemePreference = "light" | "dark";
+
+export type ScheduleStartMode = "resources" | "days";
+
+export type ScheduleViewMode = "slot" | "agenda";
+
+export type DefaultLandingPage = "schedule" | "admin";
+
+export type QuickActionAssignment = {
+  code: string;
+  actionKey: string;
+};
+
 export type FacilityLike = {
   id?: EntityId;
   name?: string | null;
@@ -9,12 +26,62 @@ export type FacilityLike = {
   operating_days?: Array<string | number> | null;
 };
 
+export type OrganizationLike = ApiRecord & {
+  id?: EntityId;
+  name?: string | null;
+};
+
+export type Facility = ApiRecord &
+  FacilityLike & {
+    id: EntityId;
+    organization?: OrganizationLike | null;
+  };
+
 export type ResourceLike = {
   id?: EntityId;
   key?: string;
   name?: string | null;
   linked_staff_name?: string | null;
   resourceId?: EntityId;
+};
+
+export type SecurityPermissions = Record<string, boolean | undefined>;
+
+export type UserMembership = ApiRecord & {
+  id?: EntityId;
+  facility: Facility;
+  role?: ApiRecord | string | null;
+  effective_security_permissions?: SecurityPermissions | null;
+};
+
+export type UserPreferences = {
+  defaultLandingPage: DefaultLandingPage;
+  lastFacilityId: string;
+  defaultFacilityId?: EntityId | null;
+  sidebarCollapsed: boolean;
+  overviewDensity: string;
+  scheduleStartMode: ScheduleStartMode;
+  scheduleViewMode: ScheduleViewMode;
+  showScheduleSlotDividers: boolean;
+  appointmentBlockDisplay: AppointmentBlockDisplay;
+  theme: ThemePreference;
+  clearRecentPatientsOnLogout: boolean;
+  recentPatients: ApiRecord[];
+  clearPersonalNotesOnLogout: boolean;
+  personalNotes: string;
+  showDemoBadge: boolean;
+  quickActionAssignments: QuickActionAssignment[];
+};
+
+export type UserProfile = ApiRecord & {
+  id?: EntityId;
+  username?: string | null;
+  is_org_admin?: boolean;
+  organization?: OrganizationLike | null;
+  memberships?: UserMembership[];
+  current_membership?: UserMembership | null;
+  admin_facility_ids?: EntityId[];
+  preferences?: Partial<UserPreferences> | ApiRecord | null;
 };
 
 export type ResourceDefinition = {
@@ -25,6 +92,7 @@ export type ResourceDefinition = {
 
 export type PatientLike = {
   id?: EntityId;
+  facility_id?: EntityId | null;
   first_name?: string | null;
   middle_name?: string | null;
   last_name?: string | null;

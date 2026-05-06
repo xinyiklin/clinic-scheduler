@@ -6,12 +6,13 @@ import type {
   ApiPayload,
   EntityId,
 } from "../../../../shared/api/types";
+import type { ApiRecord } from "../../../../shared/types/domain";
 
 export function fetchStaff(
   facilityId: EntityId | null | undefined,
   extraParams: ApiParams = {}
 ) {
-  return apiRequest("/facilities/staff/", {
+  return apiRequest<ApiRecord[]>("/facilities/staff/", {
     includeFacilityId: !facilityId,
     params: {
       ...facilityParams(facilityId),
@@ -24,7 +25,7 @@ export function createStaff(
   facilityId: EntityId | null | undefined,
   data: ApiPayload
 ) {
-  return apiRequest("/facilities/staff/", {
+  return apiRequest<ApiRecord>("/facilities/staff/", {
     method: "POST",
     includeFacilityId: !facilityId,
     params: facilityParams(facilityId),
@@ -37,7 +38,7 @@ export function updateStaff(
   id: EntityId,
   data: ApiPayload
 ) {
-  return apiRequest(`/facilities/staff/${id}/`, {
+  return apiRequest<ApiRecord>(`/facilities/staff/${id}/`, {
     method: "PATCH",
     includeFacilityId: !facilityId,
     params: facilityParams(facilityId),
@@ -50,7 +51,7 @@ export function updateStaffRole(
   id: EntityId,
   data: ApiPayload
 ) {
-  return apiRequest(`/facilities/staff-roles/${id}/`, {
+  return apiRequest<ApiRecord>(`/facilities/staff-roles/${id}/`, {
     method: "PATCH",
     includeFacilityId: !facilityId,
     params: facilityParams(facilityId),
@@ -62,7 +63,7 @@ export function deactivateStaff(
   facilityId: EntityId | null | undefined,
   id: EntityId
 ) {
-  return apiRequest(`/facilities/staff/${id}/`, {
+  return apiRequest<ApiRecord>(`/facilities/staff/${id}/`, {
     method: "DELETE",
     includeFacilityId: !facilityId,
     params: facilityParams(facilityId),

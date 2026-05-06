@@ -2,9 +2,10 @@ import { apiRequest } from "../../../../shared/api/client";
 import { facilityParams } from "./scope";
 
 import type { ApiPayload, EntityId } from "../../../../shared/api/types";
+import type { ApiRecord } from "../../../../shared/types/domain";
 
 export function fetchAppointmentTypes(facilityId: EntityId | null | undefined) {
-  return apiRequest("/facilities/appointment-types/", {
+  return apiRequest<ApiRecord[]>("/facilities/appointment-types/", {
     includeFacilityId: !facilityId,
     params: facilityParams(facilityId),
   });
@@ -14,7 +15,7 @@ export function createAppointmentType(
   facilityId: EntityId | null | undefined,
   data: ApiPayload
 ) {
-  return apiRequest("/facilities/appointment-types/", {
+  return apiRequest<ApiRecord>("/facilities/appointment-types/", {
     method: "POST",
     includeFacilityId: !facilityId,
     params: facilityParams(facilityId),
@@ -27,7 +28,7 @@ export function updateAppointmentType(
   id: EntityId,
   data: ApiPayload
 ) {
-  return apiRequest(`/facilities/appointment-types/${id}/`, {
+  return apiRequest<ApiRecord>(`/facilities/appointment-types/${id}/`, {
     method: "PATCH",
     includeFacilityId: !facilityId,
     params: facilityParams(facilityId),
@@ -39,7 +40,7 @@ export function deleteAppointmentType(
   facilityId: EntityId | null | undefined,
   id: EntityId
 ) {
-  return apiRequest(`/facilities/appointment-types/${id}/`, {
+  return apiRequest<ApiRecord>(`/facilities/appointment-types/${id}/`, {
     method: "DELETE",
     includeFacilityId: !facilityId,
     params: facilityParams(facilityId),

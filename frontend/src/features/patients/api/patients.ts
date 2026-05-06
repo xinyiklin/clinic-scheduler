@@ -5,6 +5,7 @@ import type {
   ApiPayload,
   EntityId,
 } from "../../../shared/api/types";
+import type { PatientLike } from "../../../shared/types/domain";
 
 type PatientSearchParams = {
   facilityId?: EntityId | null;
@@ -23,7 +24,7 @@ export function searchPatients({
   chart_number,
   phone,
 }: PatientSearchParams = {}) {
-  return apiRequest("/patients/", {
+  return apiRequest<PatientLike[]>("/patients/", {
     params: {
       facility_id: facilityId,
       search,
@@ -39,7 +40,7 @@ export function createPatient(
   data: ApiPayload,
   facilityId: EntityId | null | undefined
 ) {
-  return apiRequest("/patients/", {
+  return apiRequest<PatientLike>("/patients/", {
     method: "POST",
     params: {
       facility_id: facilityId,
@@ -53,7 +54,7 @@ export function updatePatient(
   data: ApiPayload,
   facilityId: EntityId | null | undefined
 ) {
-  return apiRequest(`/patients/${id}/`, {
+  return apiRequest<PatientLike>(`/patients/${id}/`, {
     method: "PUT",
     params: {
       facility_id: facilityId,
@@ -67,7 +68,7 @@ export function patchPatient(
   partialData: ApiPayload,
   facilityId: EntityId | null | undefined
 ) {
-  return apiRequest(`/patients/${id}/`, {
+  return apiRequest<PatientLike>(`/patients/${id}/`, {
     method: "PATCH",
     params: {
       facility_id: facilityId,
@@ -80,7 +81,7 @@ export function deletePatient(
   id: EntityId,
   facilityId: EntityId | null | undefined
 ) {
-  return apiRequest(`/patients/${id}/`, {
+  return apiRequest<PatientLike>(`/patients/${id}/`, {
     method: "DELETE",
     params: {
       facility_id: facilityId,
@@ -92,7 +93,7 @@ export function fetchPatientById(
   id: EntityId,
   facilityId: EntityId | null | undefined
 ) {
-  return apiRequest(`/patients/${id}/`, {
+  return apiRequest<PatientLike>(`/patients/${id}/`, {
     params: {
       facility_id: facilityId,
     },
@@ -103,7 +104,7 @@ export function revealPatientSsn(
   id: EntityId,
   facilityId: EntityId | null | undefined
 ) {
-  return apiRequest(`/patients/${id}/reveal-ssn/`, {
+  return apiRequest<{ ssn?: string | null }>(`/patients/${id}/reveal-ssn/`, {
     params: {
       facility_id: facilityId,
     },
