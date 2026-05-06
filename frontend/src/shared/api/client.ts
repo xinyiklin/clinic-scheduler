@@ -1,13 +1,30 @@
+import { ApiError } from "./types";
+
+import type {
+  ApiBlobResponse,
+  ApiErrorData,
+  ApiHeaders,
+  ApiParamValue,
+  ApiParams,
+  ApiRequestOptions,
+} from "./types";
+
 const LOCAL_API_BASE = "http://localhost:8000";
 const PRODUCTION_APP_HOST = "careflow.xinyiklin.com";
 const PRODUCTION_API_HOST = "api.careflow.xinyiklin.com";
 const PRODUCTION_API_BASE = `https://${PRODUCTION_API_HOST}`;
 export const API_PREFIX = "/v1";
-let inMemoryAccessToken = null;
-let inMemoryCsrfToken = null;
-let csrfTokenRequest = null;
 
-function normalizeApiBase(rawBase) {
+let inMemoryAccessToken: string | null = null;
+let inMemoryCsrfToken: string | null = null;
+let csrfTokenRequest: Promise<string> | null = null;
+
+type AuthTokens = {
+  access?: string | null;
+  refresh?: string | null;
+};
+
+function normalizeApiBase(rawBase: string | undefined): string | undefined {
   if (!rawBase) return rawBase;
 
   const trimmedBase = rawBase.replace(/\/+$/, "");
@@ -16,9 +33,9 @@ function normalizeApiBase(rawBase) {
     : trimmedBase;
 }
 
-function resolveApiBase() {
+function resolveApiBase(): string {
   if (import.meta.env.VITE_API_URL) {
-    return normalizeApiBase(import.meta.env.VITE_API_URL);
+    return normalizeApiBase(import.meta.env.VITE_API_URL) ?? "";
   }
 
   if (typeof window !== "undefined") {
@@ -29,18 +46,20 @@ function resolveApiBase() {
     }
 
     if (hostname === PRODUCTION_API_HOST) {
-      return normalizeApiBase(`${protocol}//${hostname}`);
+      return normalizeApiBase(`${protocol}//${hostname}`) ?? "";
     }
   }
 
-  return normalizeApiBase(
-    import.meta.env.DEV ? LOCAL_API_BASE : PRODUCTION_API_BASE
+  return (
+    normalizeApiBase(
+      import.meta.env.DEV ? LOCAL_API_BASE : PRODUCTION_API_BASE
+    ) ?? ""
   );
 }
 
 const API_BASE = resolveApiBase();
 
-function getStoredAccessToken() {
+function getStoredAccessToken(): string | null {
   return inMemoryAccessToken;
 }
 
@@ -49,7 +68,7 @@ function clearLegacyStoredTokens() {
   localStorage.removeItem("refreshToken");
 }
 
-function setStoredTokens({ access }) {
+function setStoredTokens({ access }: AuthTokens) {
   if (access) {
     inMemoryAccessToken = access;
   }
@@ -61,7 +80,10 @@ function clearStoredTokens() {
   clearLegacyStoredTokens();
 }
 
-export function setAuthTokens({ access = null, refresh = null } = {}) {
+export function setAuthTokens({
+  access = null,
+  refresh = null,
+}: AuthTokens = {}) {
   if (access === null && refresh === null) {
     clearStoredTokens();
     return;
@@ -74,7 +96,7 @@ function isUnsafeMethod(method = "GET") {
   return !["GET", "HEAD", "OPTIONS", "TRACE"].includes(method.toUpperCase());
 }
 
-function getCookie(name) {
+function getCookie(name: string) {
   if (typeof document === "undefined") return "";
 
   return (
@@ -86,7 +108,30 @@ function getCookie(name) {
   );
 }
 
-async function ensureCsrfToken() {
+function readErrorData(value: unknown): ApiErrorData {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function pickErrorMessage(data: ApiErrorData, fallback: string) {
+  const detail = data?.detail;
+  const message = data?.message;
+
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+
+  if (typeof message === "string" && message.trim()) {
+    return message;
+  }
+
+  return fallback;
+}
+
+async function ensureCsrfToken(): Promise<string> {
   if (inMemoryCsrfToken) {
     return inMemoryCsrfToken;
   }
@@ -107,9 +152,11 @@ async function ensureCsrfToken() {
           throw new Error("Unable to initialize CSRF protection.");
         }
 
-        const data = await response.json();
+        const data = readErrorData(await response.json());
         const cookieToken = decodeURIComponent(getCookie("csrftoken"));
-        inMemoryCsrfToken = data.csrfToken || cookieToken;
+        const csrfToken =
+          typeof data?.csrfToken === "string" ? data.csrfToken : cookieToken;
+        inMemoryCsrfToken = csrfToken;
 
         if (!inMemoryCsrfToken) {
           throw new Error("CSRF token was not returned.");
@@ -125,7 +172,10 @@ async function ensureCsrfToken() {
   return csrfTokenRequest;
 }
 
-async function buildCsrfHeaders(method, customHeaders = {}) {
+async function buildCsrfHeaders(
+  method: string,
+  customHeaders: ApiHeaders = {}
+): Promise<ApiHeaders> {
   if (!isUnsafeMethod(method) || customHeaders["X-CSRFToken"]) {
     return {};
   }
@@ -133,7 +183,7 @@ async function buildCsrfHeaders(method, customHeaders = {}) {
   return { "X-CSRFToken": await ensureCsrfToken() };
 }
 
-async function requestNewAccessToken() {
+async function requestNewAccessToken(): Promise<string> {
   const csrfHeaders = await buildCsrfHeaders("POST");
   const response = await fetch(
     `${API_BASE}${API_PREFIX}/users/token/refresh/`,
@@ -153,26 +203,29 @@ async function requestNewAccessToken() {
     throw new Error("Session expired. Please sign in again.");
   }
 
-  const data = await response.json();
-  setStoredTokens({ access: data.access });
+  const data = readErrorData(await response.json());
+  const access = typeof data?.access === "string" ? data.access : "";
+  setStoredTokens({ access });
 
-  return data.access;
+  return access;
 }
 
 export async function restoreAuthSession() {
   return requestNewAccessToken();
 }
 
-function buildUrl(path, params = {}) {
+function appendParams(url: URL, params: ApiParams = {}) {
+  Object.entries(params).forEach(([key, value]: [string, ApiParamValue]) => {
+    if (value !== undefined && value !== null) {
+      url.searchParams.set(key, String(value));
+    }
+  });
+}
+
+function buildUrl(path: string, params: ApiParams = {}) {
   if (/^https?:\/\//i.test(path)) {
     const url = new URL(path);
-
-    Object.entries(params || {}).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        url.searchParams.set(key, value);
-      }
-    });
-
+    appendParams(url, params);
     return url.toString();
   }
 
@@ -183,17 +236,26 @@ function buildUrl(path, params = {}) {
       : `${API_PREFIX}${normalizedPath}`;
   const url = new URL(`${API_BASE}${pathWithPrefix}`);
 
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      url.searchParams.set(key, value);
-    }
-  });
+  appendParams(url, params);
 
   return url.toString();
 }
 
-export async function apiRequest(path, options = {}, retry = true) {
-  const { params, headers: customHeaders = {}, ...restOptions } = options;
+function emitAuthLogout() {
+  window.dispatchEvent(new Event("auth:logout"));
+}
+
+export async function apiRequest<T = unknown>(
+  path: string,
+  options: ApiRequestOptions = {},
+  retry = true
+): Promise<T | null> {
+  const {
+    params,
+    headers: customHeaders = {},
+    includeFacilityId: _includeFacilityId,
+    ...restOptions
+  } = options;
 
   const url = buildUrl(path, params);
   const accessToken = getStoredAccessToken();
@@ -231,41 +293,46 @@ export async function apiRequest(path, options = {}, retry = true) {
       );
     } catch (error) {
       clearStoredTokens();
-      window.dispatchEvent(new Event("auth:logout"));
+      emitAuthLogout();
       throw error;
     }
   }
 
   if (!response.ok) {
-    let errorData = null;
+    let errorData: ApiErrorData = null;
     let errorMessage = "API request failed";
 
     try {
-      errorData = await response.json();
-      errorMessage =
-        errorData?.detail ||
-        errorData?.message ||
-        response.statusText ||
-        errorMessage;
+      errorData = readErrorData(await response.json());
+      errorMessage = pickErrorMessage(
+        errorData,
+        response.statusText || errorMessage
+      );
     } catch {
       errorMessage = response.statusText || errorMessage;
     }
 
-    const error = new Error(errorMessage);
-    error.status = response.status;
-    error.data = errorData;
-    throw error;
+    throw new ApiError(errorMessage, response.status, errorData);
   }
 
   if (response.status === 204) {
     return null;
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
-export async function apiBlobRequest(path, options = {}, retry = true) {
-  const { params, headers: customHeaders = {}, ...restOptions } = options;
+export async function apiBlobRequest(
+  path: string,
+  options: ApiRequestOptions = {},
+  retry = true
+): Promise<ApiBlobResponse> {
+  const {
+    params,
+    headers: customHeaders = {},
+    includeFacilityId: _includeFacilityId,
+    ...restOptions
+  } = options;
   const url = buildUrl(path, params);
   const accessToken = getStoredAccessToken();
   const method = restOptions.method || "GET";
@@ -298,7 +365,7 @@ export async function apiBlobRequest(path, options = {}, retry = true) {
       );
     } catch (error) {
       clearStoredTokens();
-      window.dispatchEvent(new Event("auth:logout"));
+      emitAuthLogout();
       throw error;
     }
   }
@@ -306,14 +373,12 @@ export async function apiBlobRequest(path, options = {}, retry = true) {
   if (!response.ok) {
     let errorMessage = response.statusText || "API request failed";
     try {
-      const errorData = await response.json();
-      errorMessage = errorData?.detail || errorData?.message || errorMessage;
+      const errorData = readErrorData(await response.json());
+      errorMessage = pickErrorMessage(errorData, errorMessage);
     } catch {
       // Binary endpoints may not return JSON on failure.
     }
-    const error = new Error(errorMessage);
-    error.status = response.status;
-    throw error;
+    throw new ApiError(errorMessage, response.status);
   }
 
   return {
@@ -334,7 +399,7 @@ export function logoutUser() {
       })
     )
     .catch(() => {});
-  window.dispatchEvent(new Event("auth:logout"));
+  emitAuthLogout();
 }
 
 export default API_BASE;

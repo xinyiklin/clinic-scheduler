@@ -1,6 +1,37 @@
 import { formatDOB } from "./dateTime";
 
-export function getAppointmentTimeLabel(appointment, display) {
+export type AppointmentBlockDetailAppointment = {
+  appointment_type_name?: string | null;
+  duration_minutes?: number | string | null;
+  end_time_str?: string | null;
+  notes?: string | null;
+  patient_chart_number?: string | number | null;
+  patient_date_of_birth?: string | null;
+  reason?: string | null;
+  rendering_provider_name?: string | null;
+  resource_name?: string | null;
+  room?: string | null;
+  status_name?: string | null;
+  time?: string | null;
+};
+
+export type AppointmentBlockDetailDisplay = {
+  showAppointmentStatus?: boolean;
+  showChartNumber?: boolean;
+  showDob?: boolean;
+  showNotes?: boolean;
+  showProvider?: boolean;
+  showReason?: boolean;
+  showResource?: boolean;
+  showRoom?: boolean;
+  showTimeRange?: boolean;
+  showVisitType?: boolean;
+};
+
+export function getAppointmentTimeLabel(
+  appointment: AppointmentBlockDetailAppointment,
+  display: AppointmentBlockDetailDisplay
+): string {
   const durationLabel = appointment.duration_minutes
     ? `${appointment.duration_minutes}m`
     : "";
@@ -19,7 +50,10 @@ export function getAppointmentTimeLabel(appointment, display) {
   return `${appointment.time}-${appointment.end_time_str}`;
 }
 
-export function getAppointmentDetailText(appointment, display) {
+export function getAppointmentDetailText(
+  appointment: AppointmentBlockDetailAppointment,
+  display: AppointmentBlockDetailDisplay
+): string {
   return [
     display.showVisitType ? appointment.appointment_type_name : "",
     display.showRoom && appointment.room ? `Room ${appointment.room}` : "",

@@ -1,14 +1,20 @@
+export type TimeSlot = {
+  value: number;
+  label: string;
+  time24: string;
+};
+
 export function generateTimeSlots(
   intervalMinutes = 15,
   startMinute = 0,
   endMinute = 24 * 60
-) {
+): TimeSlot[] {
   const allowedIntervals = [5, 10, 15, 20, 30, 60];
   const safeInterval = allowedIntervals.includes(intervalMinutes)
     ? intervalMinutes
     : 15;
 
-  const slots = [];
+  const slots: TimeSlot[] = [];
   const safeStartMinute = Math.max(0, Math.min(startMinute, 24 * 60));
   const safeEndMinute = Math.max(
     safeStartMinute + safeInterval,
