@@ -22,6 +22,11 @@ staticfiles/
 backend/staticfiles/
 backend/local_documents/
 
+# Docker local overrides
+docker-compose.override.yml
+docker-compose.*.override.yml
+.docker/
+
 # Environment variables
 .env
 .env.*
@@ -46,6 +51,8 @@ pnpm-debug.log*
 # Test / coverage reports
 coverage/
 frontend/coverage/
+.playwright-cli/
+output/playwright/
 playwright-report/
 frontend/playwright-report/
 test-results/
