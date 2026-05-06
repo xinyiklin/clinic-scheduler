@@ -1,4 +1,5 @@
 import AppointmentContextMenu from "../../appointments/components/AppointmentContextMenu";
+import AppointmentEditBlockedDialog from "../../appointments/components/AppointmentEditBlockedDialog";
 import AppointmentHistoryModal from "../../appointments/components/AppointmentHistoryModal";
 import AppointmentModal from "../../appointments/components/AppointmentModal";
 import ConfirmDialog from "../../../shared/components/ConfirmDialog";
@@ -8,6 +9,7 @@ export default function SchedulePageOverlays({
   appointmentFlow,
   confirmDialogState,
   contextMenuState,
+  editBlockedDialogState,
   facility,
   handleCloseAppointmentHistory,
   handleCloseAppointmentModal,
@@ -22,6 +24,8 @@ export default function SchedulePageOverlays({
   historyModalState,
   onCloseAppointmentContextMenu,
   onCloseConfirmDialog,
+  onCloseEditBlockedDialog,
+  onEditSessionBlocked,
   onOpenPatientSearch,
   patientFlow,
   physicians,
@@ -37,6 +41,7 @@ export default function SchedulePageOverlays({
       <AppointmentModal
         isOpen={appointmentFlow.modal.isOpen}
         mode={appointmentFlow.modal.mode}
+        appointmentId={appointmentFlow.modal.editingId}
         formData={appointmentFlow.modal.formData}
         facilityId={selectedFacilityId}
         physicians={physicians}
@@ -65,6 +70,7 @@ export default function SchedulePageOverlays({
           patientFlow.modal.open({ mode: "create", source: "appointment" })
         }
         timeZone={facility?.timezone}
+        onEditSessionBlocked={onEditSessionBlocked}
       />
 
       <AppointmentContextMenu
@@ -100,6 +106,12 @@ export default function SchedulePageOverlays({
         variant={confirmDialogState.variant}
         onConfirm={handleConfirmDialogConfirm}
         onCancel={onCloseConfirmDialog}
+      />
+
+      <AppointmentEditBlockedDialog
+        isOpen={editBlockedDialogState.isOpen}
+        activeEditor={editBlockedDialogState.activeEditor}
+        onClose={onCloseEditBlockedDialog}
       />
     </>
   );

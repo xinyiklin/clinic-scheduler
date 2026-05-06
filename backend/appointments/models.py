@@ -3,6 +3,9 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
+
+APPOINTMENT_EDIT_SESSION_TIMEOUT = timedelta(minutes=10)
 
 
 def get_staff_display_name(staff):
@@ -155,3 +158,35 @@ class Appointment(models.Model):
 
     def __str__(self):
         return f"{self.patient.last_name}, {self.patient.first_name} at {self.appointment_time}"
+
+
+class AppointmentEditSession(models.Model):
+    appointment = models.OneToOneField(
+        Appointment,
+        on_delete=models.CASCADE,
+        related_name="edit_session",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="appointment_edit_sessions",
+    )
+    user_display_name = models.CharField(max_length=150, blank=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-last_seen_at"]
+        indexes = [
+            models.Index(fields=["last_seen_at"], name="appt_edit_last_seen_idx"),
+        ]
+
+    def is_active(self, reference_time=None):
+        reference_time = reference_time or timezone.now()
+        return self.last_seen_at >= reference_time - APPOINTMENT_EDIT_SESSION_TIMEOUT
+
+    def __str__(self):
+        user_name = self.user_display_name or "Unknown user"
+        return f"{user_name} editing appointment {self.appointment_id}"

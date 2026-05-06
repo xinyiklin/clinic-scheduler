@@ -8,6 +8,7 @@ import formatAppointments from "../../appointments/utils/formatAppointments";
 import useAppointments from "../../appointments/hooks/useAppointments";
 import useAppointmentMutations from "../../appointments/hooks/useAppointmentMutations";
 import useAppointmentFlow from "../../appointments/hooks/useAppointmentFlow";
+import { beginAppointmentEditSession } from "../../appointments/api/appointments";
 import useSchedulePageColumns from "../hooks/useSchedulePageColumns";
 import useFacility from "../../facilities/hooks/useFacility";
 import useFacilityConfig from "../../facilities/hooks/useFacilityConfig";
@@ -79,6 +80,10 @@ export default function SchedulePage() {
     x: 0,
     y: 0,
     appointment: null,
+  });
+  const [editBlockedDialogState, setEditBlockedDialogState] = useState({
+    isOpen: false,
+    activeEditor: null,
   });
 
   const {
@@ -322,6 +327,20 @@ export default function SchedulePage() {
     });
   }, []);
 
+  const closeEditBlockedDialog = useCallback(() => {
+    setEditBlockedDialogState({
+      isOpen: false,
+      activeEditor: null,
+    });
+  }, []);
+
+  const showEditBlockedDialog = useCallback((activeEditor) => {
+    setEditBlockedDialogState({
+      isOpen: true,
+      activeEditor,
+    });
+  }, []);
+
   useEffect(() => {
     if (!contextMenuState.isOpen) return undefined;
 
@@ -391,8 +410,34 @@ export default function SchedulePage() {
   };
 
   const handleOpenEdit = useCallback(
-    (appointment) => openAppointmentModal({ mode: "edit", appointment }),
-    [openAppointmentModal]
+    async (appointment) => {
+      if (!appointment?.id || !selectedFacilityId) return;
+
+      closeAppointmentContextMenu();
+      setAppError("");
+
+      try {
+        const result = await beginAppointmentEditSession(
+          selectedFacilityId,
+          appointment.id
+        );
+
+        if (result?.status === "occupied") {
+          showEditBlockedDialog(result.active_editor);
+          return;
+        }
+
+        openAppointmentModal({ mode: "edit", appointment });
+      } catch {
+        setAppError("Appointment could not be opened. Try again.");
+      }
+    },
+    [
+      closeAppointmentContextMenu,
+      openAppointmentModal,
+      selectedFacilityId,
+      showEditBlockedDialog,
+    ]
   );
 
   const handleOpenDuplicate = useCallback(
@@ -446,6 +491,7 @@ export default function SchedulePage() {
           appointmentFlow={appointmentFlow}
           confirmDialogState={confirmDialogState}
           contextMenuState={contextMenuState}
+          editBlockedDialogState={editBlockedDialogState}
           facility={facility}
           handleCloseAppointmentHistory={handleCloseAppointmentHistory}
           handleCloseAppointmentModal={handleCloseAppointmentModal}
@@ -460,6 +506,8 @@ export default function SchedulePage() {
           historyModalState={historyModalState}
           onCloseAppointmentContextMenu={closeAppointmentContextMenu}
           onCloseConfirmDialog={closeConfirmDialog}
+          onCloseEditBlockedDialog={closeEditBlockedDialog}
+          onEditSessionBlocked={showEditBlockedDialog}
           onOpenPatientSearch={openPatientSearch}
           patientFlow={patientFlow}
           physicians={physicians}

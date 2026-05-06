@@ -11,7 +11,11 @@ import {
   fetchPatientInsurancePolicies,
   updatePatientInsurancePolicy,
 } from "./api/insurance";
-import { fetchAppointments } from "../appointments/api/appointments";
+import {
+  beginAppointmentEditSession,
+  fetchAppointments,
+} from "../appointments/api/appointments";
+import AppointmentEditBlockedDialog from "../appointments/components/AppointmentEditBlockedDialog";
 import AppointmentHistoryModal from "../appointments/components/AppointmentHistoryModal";
 import AppointmentModal from "../appointments/components/AppointmentModal";
 import useAppointmentFlow from "../appointments/hooks/useAppointmentFlow";
@@ -79,6 +83,10 @@ export function PatientHubContent({
     appointmentId: null,
     patientName: "",
     appointmentTime: "",
+  });
+  const [editBlockedDialogState, setEditBlockedDialogState] = useState({
+    isOpen: false,
+    activeEditor: null,
   });
   const [confirmDialogState, setConfirmDialogState] = useState({
     isOpen: false,
@@ -290,6 +298,20 @@ export function PatientHubContent({
     });
   }, []);
 
+  const closeEditBlockedDialog = useCallback(() => {
+    setEditBlockedDialogState({
+      isOpen: false,
+      activeEditor: null,
+    });
+  }, []);
+
+  const showEditBlockedDialog = useCallback((activeEditor) => {
+    setEditBlockedDialogState({
+      isOpen: true,
+      activeEditor,
+    });
+  }, []);
+
   const handleCloseAppointmentModal = useCallback(() => {
     setAppointmentError("");
     closeConfirmDialog();
@@ -392,11 +414,28 @@ export function PatientHubContent({
   ]);
 
   const handleOpenAppointment = useCallback(
-    (appointment) => {
-      if (!appointment) return;
-      appointmentFlow.modal.openEdit(appointment);
+    async (appointment) => {
+      if (!appointment?.id || !selectedFacilityId) return;
+
+      setAppointmentError("");
+
+      try {
+        const result = await beginAppointmentEditSession(
+          selectedFacilityId,
+          appointment.id
+        );
+
+        if (result?.status === "occupied") {
+          showEditBlockedDialog(result.active_editor);
+          return;
+        }
+
+        appointmentFlow.modal.openEdit(appointment);
+      } catch {
+        setAppointmentError("Appointment could not be opened. Try again.");
+      }
     },
-    [appointmentFlow.modal]
+    [appointmentFlow.modal, selectedFacilityId, showEditBlockedDialog]
   );
 
   const handleScheduleEncounter = useCallback(() => {
@@ -638,6 +677,7 @@ export function PatientHubContent({
       <AppointmentModal
         isOpen={appointmentFlow.modal.isOpen}
         mode={appointmentFlow.modal.mode}
+        appointmentId={appointmentFlow.modal.editingId}
         formData={appointmentFlow.modal.formData}
         facilityId={selectedFacilityId}
         physicians={physicians}
@@ -653,6 +693,7 @@ export function PatientHubContent({
         selectedPatient={appointmentFlow.selectedPatient}
         onSelectPatient={appointmentFlow.setSelectedPatient}
         timeZone={facility?.timezone}
+        onEditSessionBlocked={showEditBlockedDialog}
       />
 
       <AppointmentHistoryModal
@@ -681,6 +722,12 @@ export function PatientHubContent({
         variant={confirmDialogState.variant}
         onConfirm={confirmDialogState.onConfirm}
         onCancel={closeConfirmDialog}
+      />
+
+      <AppointmentEditBlockedDialog
+        isOpen={editBlockedDialogState.isOpen}
+        activeEditor={editBlockedDialogState.activeEditor}
+        onClose={closeEditBlockedDialog}
       />
     </div>
   );

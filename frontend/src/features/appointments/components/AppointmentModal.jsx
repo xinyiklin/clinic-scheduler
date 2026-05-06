@@ -6,6 +6,7 @@ import { ClipboardList, Clock3, UserRoundCheck } from "lucide-react";
 
 import { fetchPatientById } from "../../patients/api/patients";
 import { fetchPatientInsurancePolicies } from "../../patients/api/insurance";
+import useAppointmentEditSession from "../hooks/useAppointmentEditSession";
 import { getPatientPhoneEntries } from "../../patients/utils/contactValidation";
 import { Button, Input, Notice } from "../../../shared/components/ui";
 import { MUI_DATE_FIELD_SX } from "../../../shared/components/ui/dateFieldStyles";
@@ -50,6 +51,7 @@ function getDurationMinutes(start, end) {
 export default function AppointmentModal({
   isOpen,
   mode,
+  appointmentId,
   formData,
   facilityId,
   staffs = [],
@@ -68,6 +70,7 @@ export default function AppointmentModal({
   onOpenDetailedSearch,
   onOpenCreatePatient,
   timeZone,
+  onEditSessionBlocked,
 }) {
   const {
     register,
@@ -97,6 +100,12 @@ export default function AppointmentModal({
   const [internalError, setInternalError] = useState("");
   const { modalRef, modalStyle, dragHandleProps } = useDraggableModal({
     isOpen,
+  });
+  const editSession = useAppointmentEditSession({
+    appointmentId,
+    facilityId,
+    isOpen,
+    mode,
   });
 
   useEffect(() => {
@@ -154,6 +163,18 @@ export default function AppointmentModal({
       clearErrors("patient");
     }
   }, [selectedPatient, setValue, clearErrors]);
+
+  useEffect(() => {
+    if (!editSession.isBlockedByActiveEditor) return;
+
+    onEditSessionBlocked?.(editSession.activeEditor);
+    onClose?.();
+  }, [
+    editSession.activeEditor,
+    editSession.isBlockedByActiveEditor,
+    onClose,
+    onEditSessionBlocked,
+  ]);
 
   const watchedAppointmentTime = watch("appointment_time");
   const watchedEndTime = watch("end_time");
@@ -267,7 +288,25 @@ export default function AppointmentModal({
 
   if (!isOpen) return null;
 
+  const isEditSessionUnavailable =
+    mode === "edit" &&
+    appointmentId &&
+    (editSession.isChecking ||
+      editSession.isBlockedByActiveEditor ||
+      editSession.status === "error");
+
   const submitForm = (data) => {
+    if (editSession.isBlockedByActiveEditor) {
+      onEditSessionBlocked?.(editSession.activeEditor);
+      onClose?.();
+      return;
+    }
+
+    if (isEditSessionUnavailable) {
+      setInternalError("Retry the editing check before saving.");
+      return;
+    }
+
     try {
       onSubmit({
         ...data,
@@ -282,6 +321,7 @@ export default function AppointmentModal({
   };
 
   const displayError = error || internalError;
+  const editSessionError = editSession.error;
   const patientDisplayName = getPatientDisplayName(patientSnapshot);
   const patientPhones = getPatientPhoneEntries(patientSnapshot);
   const patientAddress = formatAddress(patientSnapshot.address);
@@ -363,6 +403,24 @@ export default function AppointmentModal({
               />
 
               <div className="min-h-0 overflow-y-auto bg-cf-surface lg:order-1">
+                {editSessionError ? (
+                  <div className="px-5 pt-4">
+                    <Notice tone="danger" title="Editing check failed">
+                      <div className="space-y-3">
+                        <p>{editSessionError}</p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="danger"
+                          onClick={() => editSession.beginSession()}
+                        >
+                          Retry
+                        </Button>
+                      </div>
+                    </Notice>
+                  </div>
+                ) : null}
+
                 {displayError ? (
                   <div className="px-5 pt-4">
                     <Notice tone="danger" title="Appointment was not saved">
@@ -627,7 +685,11 @@ export default function AppointmentModal({
               <Button type="button" onClick={onClose} variant="default">
                 Cancel
               </Button>
-              <Button type="submit" variant="primary">
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={isEditSessionUnavailable}
+              >
                 {mode === "edit" ? "Save Changes" : "Create Appointment"}
               </Button>
             </div>
