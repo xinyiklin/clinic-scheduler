@@ -4,6 +4,8 @@ import AppointmentHistoryModal from "../../appointments/components/AppointmentHi
 import AppointmentModal from "../../appointments/components/AppointmentModal";
 import ConfirmDialog from "../../../shared/components/ConfirmDialog";
 
+import type { SchedulePageOverlaysProps } from "../types";
+
 export default function SchedulePageOverlays({
   appError,
   appointmentFlow,
@@ -35,12 +37,12 @@ export default function SchedulePageOverlays({
   staffs,
   statusOptions,
   typeOptions,
-}) {
+}: SchedulePageOverlaysProps) {
   return (
     <>
       <AppointmentModal
         isOpen={appointmentFlow.modal.isOpen}
-        mode={appointmentFlow.modal.mode}
+        mode={appointmentFlow.modal.mode === "edit" ? "edit" : "create"}
         appointmentId={appointmentFlow.modal.editingId}
         formData={appointmentFlow.modal.formData}
         facilityId={selectedFacilityId}

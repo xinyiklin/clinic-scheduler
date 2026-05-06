@@ -19,6 +19,15 @@ import {
   SharedTimeRailGrid,
 } from "./ScheduleGridRenderers";
 
+import type {
+  ScheduleAppointment,
+  ScheduleDragData,
+  ScheduleDragState,
+  SchedulePreviewBlock,
+  ScheduleViewProps,
+} from "../types";
+import type { AppointmentLike } from "../../../shared/types/domain";
+
 export default function ScheduleGridView({
   appointments,
   selectedDate,
@@ -51,14 +60,18 @@ export default function ScheduleGridView({
   appointmentBlockDisplay,
   showToolbar = true,
   embedded = false,
-}) {
-  const horizontalScrollRef = useRef(null);
-  const dayScrollRefs = useRef(new Map());
+}: ScheduleViewProps) {
+  const horizontalScrollRef = useRef<HTMLDivElement | null>(null);
+  const dayScrollRefs = useRef(new Map<string, HTMLDivElement>());
   const applyingSharedScrollRef = useRef(false);
-  const [dragState, setDragState] = useState(null);
-  const [settleState, setSettleState] = useState(null);
+  const [dragState, setDragState] = useState<ScheduleDragState>(null);
+  const [settleState, setSettleState] = useState<SchedulePreviewBlock | null>(
+    null
+  );
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [activeDatePickerIndex, setActiveDatePickerIndex] = useState(null);
+  const [activeDatePickerIndex, setActiveDatePickerIndex] = useState<
+    number | null
+  >(null);
   const {
     canAddDay,
     canRemoveDay,
@@ -105,7 +118,7 @@ export default function ScheduleGridView({
   });
 
   const allPositionedByColumn = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, ScheduleAppointment[]>();
     visibleDayEntries.forEach((entry) => {
       map.set(
         entry.key,
@@ -133,7 +146,7 @@ export default function ScheduleGridView({
     [appointments, hiddenAppointmentId]
   );
 
-  const previewBlock = useMemo(() => {
+  const previewBlock = useMemo<SchedulePreviewBlock | null>(() => {
     if (dragState?.activated) {
       const sourceLayout = Array.from(allPositionedByColumn.values())
         .flat()
@@ -151,10 +164,11 @@ export default function ScheduleGridView({
       );
 
       if (!sourceLayout || !targetSlot || !targetEntry) return null;
+      const nextHoverDate = dragState.hoverDate || targetEntry.date;
 
-      const previewAppointment = {
+      const previewAppointment: AppointmentLike = {
         ...dragState.appointment,
-        date: dragState.hoverDate,
+        date: nextHoverDate,
         time: targetSlot.time24,
         resource:
           targetResource?.resourceId || dragState.appointment.resource || null,
@@ -169,7 +183,7 @@ export default function ScheduleGridView({
 
       return {
         appointment: previewAppointment,
-        hoverDate: dragState.hoverDate,
+        hoverDate: nextHoverDate,
         hoverDayKey: dragState.hoverDayKey,
         hoverTime24: dragState.hoverTime24,
         laneIndex: sourceLayout.laneIndex,
@@ -193,7 +207,7 @@ export default function ScheduleGridView({
   ]);
 
   const appointmentsByColumn = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, ScheduleAppointment[]>();
     visibleDayEntries.forEach((entry) => {
       const resource = resourceOptionsByKey.get(entry.resourceKey);
       map.set(
@@ -242,27 +256,33 @@ export default function ScheduleGridView({
     return () => window.clearTimeout(fallbackTimeoutId);
   }, [appointments, settleState]);
 
-  const registerDayScrollRef = useCallback((key, node) => {
-    if (node) {
-      dayScrollRefs.current.set(key, node);
-    } else {
-      dayScrollRefs.current.delete(key);
-    }
-  }, []);
+  const registerDayScrollRef = useCallback(
+    (key: string, node: HTMLDivElement | null) => {
+      if (node) {
+        dayScrollRefs.current.set(key, node);
+      } else {
+        dayScrollRefs.current.delete(key);
+      }
+    },
+    []
+  );
 
-  const syncDayScrollTops = useCallback((nextScrollTop, sourceKey = null) => {
-    applyingSharedScrollRef.current = true;
+  const syncDayScrollTops = useCallback(
+    (nextScrollTop: number, sourceKey?: string) => {
+      applyingSharedScrollRef.current = true;
 
-    dayScrollRefs.current.forEach((container, key) => {
-      if (sourceKey && key === sourceKey) return;
-      if (Math.abs(container.scrollTop - nextScrollTop) < 1) return;
-      container.scrollTop = nextScrollTop;
-    });
+      dayScrollRefs.current.forEach((container, key) => {
+        if (sourceKey && key === sourceKey) return;
+        if (Math.abs(container.scrollTop - nextScrollTop) < 1) return;
+        container.scrollTop = nextScrollTop;
+      });
 
-    window.requestAnimationFrame(() => {
-      applyingSharedScrollRef.current = false;
-    });
-  }, []);
+      window.requestAnimationFrame(() => {
+        applyingSharedScrollRef.current = false;
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     if (!linkScroll) return;
@@ -270,10 +290,10 @@ export default function ScheduleGridView({
   }, [linkScroll, sharedScrollTop, syncDayScrollTops, resolvedVisibleDates]);
 
   const handlePointerDragStart = (
-    event,
-    appointment,
-    hoverDayKey,
-    hoverResourceKey
+    event: React.PointerEvent<HTMLDivElement>,
+    appointment: AppointmentLike,
+    hoverDayKey: string,
+    hoverResourceKey: string
   ) => {
     setDragState({
       appointment,
@@ -300,7 +320,7 @@ export default function ScheduleGridView({
       document.body.style.userSelect = "none";
     }
 
-    const handlePointerMove = (event) => {
+    const handlePointerMove = (event: PointerEvent) => {
       setDragState((prev) => {
         if (!prev) return prev;
 
@@ -369,7 +389,7 @@ export default function ScheduleGridView({
           hoverTime24: nextHoverTime24,
           pointerX: event.clientX,
           pointerY: event.clientY,
-        };
+        } satisfies ScheduleDragData;
       });
     };
 
@@ -393,10 +413,11 @@ export default function ScheduleGridView({
         (entry) => entry.key === dragState.hoverDayKey
       );
       const nextResourceId = targetResource?.resourceId || null;
+      const nextHoverDate = dragState.hoverDate || targetEntry?.date || "";
       if (
         targetSlot &&
         targetEntry &&
-        (dragState.hoverDate !== dragState.originalDate ||
+        (nextHoverDate !== dragState.originalDate ||
           targetSlot.time24 !== dragState.originalTime ||
           String(nextResourceId || "") !==
             String(dragState.appointment.resource || ""))
@@ -409,7 +430,7 @@ export default function ScheduleGridView({
           setSettleState({
             appointment: {
               ...dragState.appointment,
-              date: dragState.hoverDate,
+              date: nextHoverDate,
               time: targetSlot.time24,
               resource: nextResourceId,
               end_time_str: toTime24(
@@ -420,7 +441,7 @@ export default function ScheduleGridView({
                   )
               ),
             },
-            hoverDate: dragState.hoverDate,
+            hoverDate: nextHoverDate,
             hoverDayKey: dragState.hoverDayKey,
             hoverTime24: targetSlot.time24,
             laneIndex: sourceLayout.laneIndex,
@@ -444,7 +465,7 @@ export default function ScheduleGridView({
         }
 
         onAppointmentDrop?.(
-          dragState.hoverDate,
+          nextHoverDate,
           targetSlot.time24,
           dragState.appointment,
           nextResourceId
@@ -525,7 +546,7 @@ export default function ScheduleGridView({
             appointmentBlockDisplay={appointmentBlockDisplay}
             appointmentsByColumn={appointmentsByColumn}
             applyingSharedScrollRef={applyingSharedScrollRef}
-            canAddDay={canAddDay}
+            canAddDay={Boolean(canAddDay)}
             canRemoveDay={canRemoveDay}
             dragState={dragState}
             embedded={embedded}
@@ -537,13 +558,13 @@ export default function ScheduleGridView({
             linkScroll={linkScroll}
             onAppointmentContextMenu={onAppointmentContextMenu}
             onPointerDragStart={handlePointerDragStart}
-            onSharedScrollChange={onSharedScrollChange}
+            onSharedScrollChange={onSharedScrollChange ?? undefined}
             onSlotDoubleClick={onSlotDoubleClick}
             previewBlock={previewBlock}
             registerDayScrollRef={registerDayScrollRef}
             resourceOptions={resourceOptions}
             resourceOptionsByKey={resourceOptionsByKey}
-            shouldScrollColumns={shouldScrollColumns}
+            shouldScrollColumns={Boolean(shouldScrollColumns)}
             showIntervalSelector={showIntervalSelector}
             showResourceSelector={showResourceSelector}
             showSlotDividers={showSlotDividers}

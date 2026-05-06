@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
+import type { MouseEvent } from "react";
 
 import ScheduleWorkspaceLayout from "../components/ScheduleWorkspaceLayout";
 import SchedulePageOverlays from "./SchedulePageOverlays";
@@ -23,6 +24,26 @@ import {
 } from "../../../shared/constants/quickActions";
 import { getPatientChartName } from "../../patients/utils/patientDisplay";
 
+import type { EntityId } from "../../../shared/api/types";
+import type { ApiRecord, AppointmentLike } from "../../../shared/types/domain";
+import type {
+  AppointmentPatient,
+  AppointmentResource,
+  AppointmentStaff,
+  AppointmentStatusOption,
+  AppointmentSubmitPayload,
+  AppointmentTypeOption,
+} from "../../appointments/types";
+import type {
+  ScheduleConfirmDialogState,
+  ScheduleContextMenuState,
+  ScheduleEditBlockedDialogState,
+  ScheduleFacilityOption,
+  ScheduleHistoryModalState,
+} from "../types";
+
+type AppointmentFlowOptions = Parameters<typeof useAppointmentFlow>[0];
+
 export default function SchedulePage() {
   const { facility, selectedFacilityId } = useFacility();
   const { physicians, staffs, resources, statusOptions, typeOptions } =
@@ -31,6 +52,27 @@ export default function SchedulePage() {
     usePatientFlowContext();
   const { setRouteReady } = useBootReadiness();
   const { preferences, updatePreferences } = useUserPreferences();
+  const scheduleResources = resources as ScheduleFacilityOption[];
+  const appointmentPhysicians = physicians as unknown as AppointmentStaff[];
+  const appointmentStaffs = staffs as unknown as AppointmentStaff[];
+  const appointmentResources = resources as unknown as AppointmentResource[];
+  const appointmentStatusOptions =
+    statusOptions as unknown as AppointmentStatusOption[];
+  const appointmentTypeOptions =
+    typeOptions as unknown as AppointmentTypeOption[];
+  const appointmentRecentPatients =
+    recentPatients as unknown as AppointmentPatient[];
+  const appointmentFlowPhysicians =
+    physicians as unknown as AppointmentFlowOptions["physicians"];
+  const appointmentFlowStaffs = staffs as unknown as NonNullable<
+    AppointmentFlowOptions["staffs"]
+  >;
+  const appointmentFlowResources =
+    resources as unknown as AppointmentFlowOptions["resources"];
+  const appointmentFlowStatusOptions =
+    statusOptions as unknown as AppointmentFlowOptions["statusOptions"];
+  const appointmentFlowTypeOptions =
+    typeOptions as unknown as AppointmentFlowOptions["typeOptions"];
 
   const [appError, setAppError] = useState("");
   const viewMode = preferences.scheduleViewMode;
@@ -58,33 +100,41 @@ export default function SchedulePage() {
     visibleColumnIntervals,
     visibleColumnResourceKeys,
     visibleDayCount,
-  } = useSchedulePageColumns({ facility, preferences, resources });
+  } = useSchedulePageColumns({
+    facility,
+    preferences,
+    resources: scheduleResources,
+  });
 
-  const [confirmDialogState, setConfirmDialogState] = useState({
-    isOpen: false,
-    title: "",
-    message: "",
-    confirmText: "Confirm",
-    cancelText: "Cancel",
-    variant: "default",
-    onConfirm: null,
-  });
-  const [historyModalState, setHistoryModalState] = useState({
-    isOpen: false,
-    appointmentId: null,
-    patientName: null,
-    appointmentTime: null,
-  });
-  const [contextMenuState, setContextMenuState] = useState({
-    isOpen: false,
-    x: 0,
-    y: 0,
-    appointment: null,
-  });
-  const [editBlockedDialogState, setEditBlockedDialogState] = useState({
-    isOpen: false,
-    activeEditor: null,
-  });
+  const [confirmDialogState, setConfirmDialogState] =
+    useState<ScheduleConfirmDialogState>({
+      isOpen: false,
+      title: "",
+      message: "",
+      confirmText: "Confirm",
+      cancelText: "Cancel",
+      variant: "default",
+      onConfirm: null,
+    });
+  const [historyModalState, setHistoryModalState] =
+    useState<ScheduleHistoryModalState>({
+      isOpen: false,
+      appointmentId: null,
+      patientName: null,
+      appointmentTime: null,
+    });
+  const [contextMenuState, setContextMenuState] =
+    useState<ScheduleContextMenuState>({
+      isOpen: false,
+      x: 0,
+      y: 0,
+      appointment: null,
+    });
+  const [editBlockedDialogState, setEditBlockedDialogState] =
+    useState<ScheduleEditBlockedDialogState>({
+      isOpen: false,
+      activeEditor: null,
+    });
 
   const {
     appointments,
@@ -109,17 +159,17 @@ export default function SchedulePage() {
   ]);
   const appointmentFlow = useAppointmentFlow({
     facility,
-    physicians,
-    staffs,
-    resources,
-    statusOptions,
-    typeOptions,
+    physicians: appointmentFlowPhysicians,
+    staffs: appointmentFlowStaffs,
+    resources: appointmentFlowResources,
+    statusOptions: appointmentFlowStatusOptions,
+    typeOptions: appointmentFlowTypeOptions,
     selectedDate,
   });
   const { open: openAppointmentModal } = appointmentFlow.modal;
 
   const handleScheduleQuickAction = useCallback(
-    (type) => {
+    (type: string | null | undefined) => {
       if (!type) return false;
 
       if (type === "new-appointment") {
@@ -139,7 +189,9 @@ export default function SchedulePage() {
       }
 
       if (type === "view:slot" || type === "view:agenda") {
-        updatePreferences({ scheduleViewMode: type.replace("view:", "") });
+        updatePreferences({
+          scheduleViewMode: type === "view:slot" ? "slot" : "agenda",
+        });
         return true;
       }
 
@@ -157,7 +209,7 @@ export default function SchedulePage() {
   );
 
   useEffect(() => {
-    const consumePendingAction = (type) => {
+    const consumePendingAction = (type: string | null | undefined) => {
       if (!handleScheduleQuickAction(type)) return;
       sessionStorage.removeItem(SCHEDULE_QUICK_ACTION_STORAGE_KEY);
     };
@@ -166,8 +218,9 @@ export default function SchedulePage() {
       sessionStorage.getItem(SCHEDULE_QUICK_ACTION_STORAGE_KEY)
     );
 
-    const handleWindowAction = (event) => {
-      consumePendingAction(event.detail?.type);
+    const handleWindowAction = (event: Event) => {
+      const actionEvent = event as CustomEvent<{ type?: string }>;
+      consumePendingAction(actionEvent.detail?.type);
     };
 
     window.addEventListener(SCHEDULE_QUICK_ACTION_EVENT, handleWindowAction);
@@ -195,8 +248,19 @@ export default function SchedulePage() {
     setError: setAppError,
   });
 
-  const openConfirmDialog = (opts) =>
-    setConfirmDialogState({ isOpen: true, ...opts });
+  const openConfirmDialog = (
+    opts: Omit<Partial<ScheduleConfirmDialogState>, "isOpen"> &
+      Pick<ScheduleConfirmDialogState, "title" | "message">
+  ) =>
+    setConfirmDialogState({
+      isOpen: true,
+      title: opts.title,
+      message: opts.message,
+      confirmText: opts.confirmText || "Confirm",
+      cancelText: opts.cancelText || "Cancel",
+      variant: opts.variant || "default",
+      onConfirm: opts.onConfirm || null,
+    });
   const closeConfirmDialog = () =>
     setConfirmDialogState({
       isOpen: false,
@@ -213,9 +277,11 @@ export default function SchedulePage() {
     closeConfirmDialog();
   };
 
-  const handleSubmitAppointment = async (submittedData) => {
+  const handleSubmitAppointment = async (
+    submittedData: AppointmentSubmitPayload
+  ) => {
     setAppError("");
-    const buildPayload = (overrides = {}) => ({
+    const buildPayload = (overrides: ApiRecord = {}) => ({
       ...submittedData,
       patient: appointmentFlow.selectedPatient?.id || "",
       resource: submittedData.resource ? Number(submittedData.resource) : null,
@@ -256,7 +322,8 @@ export default function SchedulePage() {
   };
 
   const handleDeleteAppointment = () => {
-    if (!appointmentFlow.modal.editingId) return;
+    const appointmentId = appointmentFlow.modal.editingId;
+    if (!appointmentId) return;
     openConfirmDialog({
       title: "Delete Appointment",
       message:
@@ -265,13 +332,14 @@ export default function SchedulePage() {
       cancelText: "Cancel",
       variant: "danger",
       onConfirm: async () => {
-        await deleteMutation.mutateAsync(appointmentFlow.modal.editingId);
+        await deleteMutation.mutateAsync(appointmentId);
       },
     });
   };
 
-  const handleDeleteAppointmentFromMenu = (appointment) => {
-    if (!appointment?.id) return;
+  const handleDeleteAppointmentFromMenu = (appointment: AppointmentLike) => {
+    const appointmentId = appointment?.id;
+    if (!appointmentId) return;
     openConfirmDialog({
       title: "Delete Appointment",
       message:
@@ -280,19 +348,21 @@ export default function SchedulePage() {
       cancelText: "Cancel",
       variant: "danger",
       onConfirm: async () => {
-        await deleteMutation.mutateAsync(appointment.id);
+        await deleteMutation.mutateAsync(appointmentId);
       },
     });
   };
 
-  const handleOpenAppointmentHistory = (appointment = null) => {
+  const handleOpenAppointmentHistory = (
+    appointment: AppointmentLike | null = null
+  ) => {
     if (!appointmentFlow.modal.editingId && !appointment?.id) return;
     setHistoryModalState({
       isOpen: true,
       appointmentId: appointment?.id || appointmentFlow.modal.editingId,
       patientName:
         (appointment
-          ? getPatientChartName(appointment, appointment.patient_name)
+          ? getPatientChartName(appointment, appointment.patient_name || "")
           : getPatientChartName(appointmentFlow.selectedPatient, "")) || null,
       appointmentTime:
         appointment?.appointment_time ||
@@ -309,7 +379,10 @@ export default function SchedulePage() {
     });
   };
 
-  const openAppointmentContextMenu = (event, appointment) => {
+  const openAppointmentContextMenu = (
+    event: MouseEvent<HTMLDivElement>,
+    appointment: AppointmentLike
+  ) => {
     setContextMenuState({
       isOpen: true,
       x: event.clientX,
@@ -334,17 +407,20 @@ export default function SchedulePage() {
     });
   }, []);
 
-  const showEditBlockedDialog = useCallback((activeEditor) => {
-    setEditBlockedDialogState({
-      isOpen: true,
-      activeEditor,
-    });
-  }, []);
+  const showEditBlockedDialog = useCallback(
+    (activeEditor: ScheduleEditBlockedDialogState["activeEditor"]) => {
+      setEditBlockedDialogState({
+        isOpen: true,
+        activeEditor,
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     if (!contextMenuState.isOpen) return undefined;
 
-    const handleEscape = (event) => {
+    const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeAppointmentContextMenu();
       }
@@ -364,15 +440,16 @@ export default function SchedulePage() {
   }, [closeAppointmentContextMenu, contextMenuState.isOpen]);
 
   const handleDropAppointment = async (
-    date,
-    time24,
-    dragged,
-    nextResourceId
+    date: string,
+    time24: string,
+    dragged: AppointmentLike,
+    nextResourceId?: EntityId | null
   ) => {
-    if (!dragged) return;
+    const appointmentId = dragged?.id;
+    if (!appointmentId) return;
     const resourceId =
       nextResourceId !== undefined ? nextResourceId : dragged.resource || null;
-    const buildPayload = (overrides = {}) => ({
+    const buildPayload = (overrides: ApiRecord = {}) => ({
       patient: dragged.patient_id,
       resource: resourceId,
       rendering_provider: dragged.rendering_provider || null,
@@ -387,7 +464,10 @@ export default function SchedulePage() {
     });
 
     try {
-      await moveMutation.mutateAsync({ id: dragged.id, data: buildPayload() });
+      await moveMutation.mutateAsync({
+        id: appointmentId,
+        data: buildPayload(),
+      });
     } catch (err) {
       const duplicateError = getDuplicateDayAppointmentError(err);
       if (!duplicateError) return;
@@ -401,7 +481,7 @@ export default function SchedulePage() {
         variant: "warning",
         onConfirm: async () => {
           await moveMutation.mutateAsync({
-            id: dragged.id,
+            id: appointmentId,
             data: buildPayload({ allow_same_day_double_book: true }),
           });
         },
@@ -410,7 +490,7 @@ export default function SchedulePage() {
   };
 
   const handleOpenEdit = useCallback(
-    async (appointment) => {
+    async (appointment: AppointmentLike) => {
       if (!appointment?.id || !selectedFacilityId) return;
 
       closeAppointmentContextMenu();
@@ -423,7 +503,7 @@ export default function SchedulePage() {
         );
 
         if (result?.status === "occupied") {
-          showEditBlockedDialog(result.active_editor);
+          showEditBlockedDialog(result.active_editor || null);
           return;
         }
 
@@ -441,12 +521,13 @@ export default function SchedulePage() {
   );
 
   const handleOpenDuplicate = useCallback(
-    (appointment) => appointmentFlow.modal.openDuplicate(appointment),
+    (appointment: AppointmentLike) =>
+      appointmentFlow.modal.openDuplicate(appointment),
     [appointmentFlow.modal]
   );
 
   const handleOpenPatientHub = useCallback(
-    (appointment) => {
+    (appointment: AppointmentLike) => {
       if (!appointment?.patient_id) return;
       patientFlow.hub.openById(appointment.patient_id);
     },
@@ -454,7 +535,7 @@ export default function SchedulePage() {
   );
 
   const handleOpenFromSlot = useCallback(
-    (date, time24, resourceId = "") =>
+    (date: string, time24: string, resourceId: EntityId | "" = "") =>
       appointmentFlow.modal.openFromSlot(date, time24, resourceId),
     [appointmentFlow.modal]
   );
@@ -510,13 +591,13 @@ export default function SchedulePage() {
           onEditSessionBlocked={showEditBlockedDialog}
           onOpenPatientSearch={openPatientSearch}
           patientFlow={patientFlow}
-          physicians={physicians}
-          recentPatients={recentPatients}
-          resources={resources}
+          physicians={appointmentPhysicians}
+          recentPatients={appointmentRecentPatients}
+          resources={appointmentResources}
           selectedFacilityId={selectedFacilityId}
-          staffs={staffs}
-          statusOptions={statusOptions}
-          typeOptions={typeOptions}
+          staffs={appointmentStaffs}
+          statusOptions={appointmentStatusOptions}
+          typeOptions={appointmentTypeOptions}
         />
       }
     >

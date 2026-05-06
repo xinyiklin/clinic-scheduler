@@ -3,10 +3,16 @@ import { CalendarDays, ChevronDown, Clock3, Columns3 } from "lucide-react";
 
 import { SLOT_INTERVAL_OPTIONS } from "../utils/scheduleConstants";
 
+import type { ScheduleHeaderProps, ScheduleMode } from "../types";
+
 const SCHEDULE_MODE_OPTIONS = [
   { value: "resources", label: "Resource", icon: Columns3 },
   { value: "days", label: "Multi-day", icon: CalendarDays },
-];
+] satisfies Array<{
+  value: ScheduleMode;
+  label: string;
+  icon: typeof Columns3;
+}>;
 
 export default function ScheduleHeader({
   facility,
@@ -14,19 +20,24 @@ export default function ScheduleHeader({
   activeScheduleInterval,
   onScheduleModeChange,
   onScheduleIntervalChange,
-}) {
+}: ScheduleHeaderProps) {
   const [isIntervalExpanded, setIsIntervalExpanded] = useState(false);
-  const intervalControlRef = useRef(null);
+  const intervalControlRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!isIntervalExpanded) return undefined;
 
-    const handlePointerDown = (event) => {
-      if (intervalControlRef.current?.contains(event.target)) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        intervalControlRef.current?.contains(event.target)
+      ) {
+        return;
+      }
       setIsIntervalExpanded(false);
     };
 
-    const handleKeyDown = (event) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setIsIntervalExpanded(false);
     };
 

@@ -5,6 +5,13 @@ import { formatDateOnlyInTimeZone } from "../../../shared/utils/dateTime";
 import useScheduleHeatmap from "../hooks/useScheduleHeatmap";
 import { MAX_SCHEDULE_COLUMNS } from "../utils/scheduleConstants";
 
+import type { ScheduleSidebarProps } from "../types";
+
+type CalendarDayCell = {
+  day: number;
+  date: string;
+} | null;
+
 const MONTH_LABELS = [
   "Jan",
   "Feb",
@@ -18,9 +25,9 @@ const MONTH_LABELS = [
   "Oct",
   "Nov",
   "Dec",
-];
+] as const;
 
-function buildCalendarDayCells(selectedDate) {
+function buildCalendarDayCells(selectedDate: string): CalendarDayCell[] {
   const [yearText, monthText] = (selectedDate || "").split("-");
   const year = Number(yearText);
   const month = Number(monthText);
@@ -48,13 +55,13 @@ function buildCalendarDayCells(selectedDate) {
   return cells;
 }
 
-function getMonthStartDate(dateString) {
+function getMonthStartDate(dateString: string) {
   const [yearText, monthText] = (dateString || "").split("-");
   if (!yearText || !monthText) return "";
   return `${yearText}-${monthText}-01`;
 }
 
-function shiftMonth(dateString, offset) {
+function shiftMonth(dateString: string, offset: number) {
   const [yearText, monthText] = (dateString || "").split("-");
   const year = Number(yearText);
   const month = Number(monthText);
@@ -67,20 +74,20 @@ function shiftMonth(dateString, offset) {
   return `${nextYear}-${nextMonth}-01`;
 }
 
-function setMonthPart(dateString, monthIndex) {
+function setMonthPart(dateString: string, monthIndex: number) {
   const [yearText] = (dateString || "").split("-");
   if (!yearText || monthIndex < 0) return dateString;
   return `${yearText}-${String(monthIndex + 1).padStart(2, "0")}-01`;
 }
 
-function shiftYear(dateString, offset) {
+function shiftYear(dateString: string, offset: number) {
   const [yearText, monthText] = (dateString || "").split("-");
   const year = Number(yearText);
   if (!year || !monthText) return dateString;
   return `${year + offset}-${monthText}-01`;
 }
 
-function getHeatmapClass(count, maxCount) {
+function getHeatmapClass(count: number, maxCount: number) {
   if (!count) return "text-cf-text-muted hover:bg-cf-surface-soft";
 
   const intensity = count / Math.max(maxCount, 1);
@@ -103,7 +110,7 @@ export default function ScheduleSidebar({
   onJumpToToday,
   onSelectDate,
   onToggleResource,
-}) {
+}: ScheduleSidebarProps) {
   const [displayMonth, setDisplayMonth] = useState(() =>
     getMonthStartDate(selectedDate)
   );

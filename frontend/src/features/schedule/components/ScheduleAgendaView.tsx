@@ -9,6 +9,7 @@ import {
   DEFAULT_APPOINTMENT_BLOCK_DISPLAY,
   sanitizeAppointmentBlockDisplay,
 } from "../../../shared/constants/appointmentBlockDisplay";
+import type { AppointmentBlockDisplay } from "../../../shared/constants/appointmentBlockDisplay";
 import {
   getAppointmentDetailText,
   getAppointmentTimeLabel,
@@ -16,33 +17,70 @@ import {
 import { MAX_SCHEDULE_COLUMNS } from "../utils/scheduleConstants";
 import { isFacilityOperatingDate } from "../utils/scheduleOperatingHours";
 
-function addDaysToDateStringInTimeZone(dateString, offset, timeZone) {
+import type {
+  ScheduleDayEntry,
+  ScheduleDisplayAppointment,
+  ScheduleViewProps,
+} from "../types";
+import type {
+  AppointmentLike,
+  ResourceDefinition,
+} from "../../../shared/types/domain";
+
+type AgendaDayEntry = ScheduleDayEntry & {
+  index: number;
+};
+
+type AgendaColumnHeaderProps = {
+  date: string;
+  timeZone: string;
+  resourceKey: string;
+  resourceOptions: ResourceDefinition[];
+  appointmentCount?: number;
+  resourceColumnMode?: boolean;
+  canRemoveDay: boolean;
+  onRemove: () => void;
+  onChangeResource: (resourceKey: string) => void;
+  showResourceSelector?: boolean;
+};
+
+function addDaysToDateStringInTimeZone(
+  dateString: string,
+  offset: number,
+  timeZone: string
+) {
   const date = parseDateOnlyInTimeZone(dateString, timeZone);
   if (!date) return dateString;
   date.setUTCDate(date.getUTCDate() + offset);
   return formatDateOnlyInTimeZone(date, timeZone, "yyyy-MM-dd");
 }
 
-function hourKey(time24) {
+function hourKey(time24?: string | null) {
   const [hour] = (time24 || "00:00").split(":").map(Number);
   const displayHour = hour % 12 === 0 ? 12 : hour % 12;
   const suffix = hour < 12 ? "AM" : "PM";
   return `${displayHour}:00 ${suffix}`;
 }
 
-function getDefaultResourceKey(resourceOptions) {
+function getDefaultResourceKey(resourceOptions: ResourceDefinition[]) {
   if (!resourceOptions.length) return "";
   return resourceOptions[0].key;
 }
 
-function doesAppointmentMatchResource(appointment, resource) {
+function doesAppointmentMatchResource(
+  appointment: AppointmentLike,
+  resource?: ResourceDefinition
+) {
   if (!resource) return false;
   return (
     String(appointment.resource || "") === String(resource.resourceId || "")
   );
 }
 
-function getAppointmentColorRoles(appointment, display) {
+function getAppointmentColorRoles(
+  appointment: AppointmentLike,
+  display: AppointmentBlockDisplay
+) {
   const statusColor = appointment.status_color || "#ffffff";
   const visitTypeColor = appointment.appointment_type_color || statusColor;
   const useStatusBlockColor = display.colorMode === "statusBlockVisitChip";
@@ -64,7 +102,7 @@ function AgendaColumnHeader({
   onRemove,
   onChangeResource,
   showResourceSelector = true,
-}) {
+}: AgendaColumnHeaderProps) {
   if (resourceColumnMode) {
     const resourceLabel =
       resourceOptions.find((resource) => resource.key === resourceKey)?.label ||
@@ -159,7 +197,7 @@ export default function ScheduleAgendaView({
   showResourceSelector = true,
   showToolbar = true,
   embedded = false,
-}) {
+}: ScheduleViewProps) {
   const resourceOptionsByKey = useMemo(
     () => new Map(resourceOptions.map((resource) => [resource.key, resource])),
     [resourceOptions]
@@ -168,14 +206,17 @@ export default function ScheduleAgendaView({
 
   const visibleDayEntries = useMemo(
     () =>
-      visibleDates.map((date, index) => ({
-        date,
-        index,
-        key: `${date}:${index}`,
-        isOperatingDay: isFacilityOperatingDate(date, timeZone, facility),
-        resourceKey:
-          columnResourceKeys[index] || getDefaultResourceKey(resourceOptions),
-      })),
+      visibleDates.map(
+        (date, index): AgendaDayEntry => ({
+          date,
+          index,
+          key: `${date}:${index}`,
+          isOperatingDay: isFacilityOperatingDate(date, timeZone, facility),
+          intervalMinutes: 0,
+          resourceKey:
+            columnResourceKeys[index] || getDefaultResourceKey(resourceOptions),
+        })
+      ),
     [columnResourceKeys, facility, resourceOptions, timeZone, visibleDates]
   );
 
@@ -210,7 +251,7 @@ export default function ScheduleAgendaView({
   }, [selectedDate, timeZone, visibleDates]);
 
   const appointmentsByColumn = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, Map<string, ScheduleDisplayAppointment[]>>();
 
     visibleDayEntries.forEach((entry) => {
       const resource = resourceOptionsByKey.get(entry.resourceKey);
@@ -224,11 +265,11 @@ export default function ScheduleAgendaView({
           (left.time || "").localeCompare(right.time || "")
         );
 
-      const grouped = new Map();
+      const grouped = new Map<string, ScheduleDisplayAppointment[]>();
       dayAppointments.forEach((appointment) => {
         const key = hourKey(appointment.time);
         if (!grouped.has(key)) grouped.set(key, []);
-        grouped.get(key).push(appointment);
+        grouped.get(key)?.push(appointment);
       });
 
       map.set(entry.key, grouped);
@@ -238,7 +279,7 @@ export default function ScheduleAgendaView({
   }, [appointments, resourceOptionsByKey, visibleDayEntries]);
 
   const handleRemoveDay = useCallback(
-    (removeIndex) => {
+    (removeIndex: number) => {
       if (!canRemoveDay) return;
 
       const nextDates = visibleDayEntries
@@ -298,7 +339,7 @@ export default function ScheduleAgendaView({
   ]);
 
   const handleChangeResourceKey = useCallback(
-    (targetIndex, nextResourceKey) => {
+    (targetIndex: number, nextResourceKey: string) => {
       const nextResourceKeys = visibleDayEntries.map((entry, index) =>
         index === targetIndex ? nextResourceKey : entry.resourceKey
       );
@@ -349,7 +390,8 @@ export default function ScheduleAgendaView({
         >
           {visibleDayEntries.map((entry, index) => {
             const groupedAppointments =
-              appointmentsByColumn.get(entry.key) || new Map();
+              appointmentsByColumn.get(entry.key) ||
+              new Map<string, ScheduleDisplayAppointment[]>();
             const hourGroups = Array.from(groupedAppointments.entries());
             const appointmentCount = hourGroups.reduce(
               (total, [, items]) => total + items.length,

@@ -5,11 +5,20 @@ import ResourceScheduleView from "./ResourceScheduleView";
 import ScheduleHeader from "./ScheduleHeader";
 import ScheduleSidebar from "./ScheduleSidebar";
 
+import type {
+  ResourceLoadSummary,
+  ScheduleWorkspaceLayoutProps,
+} from "../types";
+import type {
+  AppointmentLike,
+  ResourceDefinition,
+} from "../../../shared/types/domain";
+
 function buildResourceLoadSummaries(
-  resourceDefinitions,
-  formattedAppointments,
-  selectedDate
-) {
+  resourceDefinitions: ResourceDefinition[],
+  formattedAppointments: AppointmentLike[],
+  selectedDate: string
+): ResourceLoadSummary[] {
   const dotClasses = [
     "bg-blue-500",
     "bg-emerald-500",
@@ -60,7 +69,7 @@ export default function ScheduleWorkspaceLayout({
   onAppointmentDrop,
   onAppointmentContextMenu,
   onColumnIntervalsChange,
-}) {
+}: ScheduleWorkspaceLayoutProps) {
   const resourceLoadSummaries = useMemo(
     () =>
       buildResourceLoadSummaries(
