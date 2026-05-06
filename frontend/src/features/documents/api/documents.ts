@@ -1,6 +1,32 @@
 import { apiBlobRequest, apiRequest } from "../../../shared/api/client";
 
-function getFilenameFromDisposition(contentDisposition, fallback) {
+import type { ApiPayload, EntityId } from "../../../shared/api/types";
+
+type FacilityScopedParams = {
+  facilityId?: EntityId | null;
+};
+
+type PatientScopedParams = FacilityScopedParams & {
+  patientId?: EntityId | null;
+};
+
+type PatientDocumentRef = {
+  id: EntityId;
+  name?: string | null;
+};
+
+type PatientDocumentBundleParams = FacilityScopedParams & {
+  documents: PatientDocumentRef[];
+};
+
+type PatientDocumentParams = FacilityScopedParams & {
+  document: PatientDocumentRef;
+};
+
+function getFilenameFromDisposition(
+  contentDisposition: string,
+  fallback?: string | null
+) {
   const utfMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
   if (utfMatch?.[1]) return decodeURIComponent(utfMatch[1]);
 
@@ -8,7 +34,7 @@ function getFilenameFromDisposition(contentDisposition, fallback) {
   return plainMatch?.[1] || fallback || "document";
 }
 
-function openBlob(blob, filename) {
+function openBlob(blob: Blob, filename?: string | null) {
   const url = URL.createObjectURL(blob);
   const openedWindow = window.open(url, "_blank", "noopener,noreferrer");
 
@@ -24,7 +50,7 @@ function openBlob(blob, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-function downloadBlob(blob, filename) {
+function downloadBlob(blob: Blob, filename?: string | null) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -40,9 +66,12 @@ export function uploadPatientDocument({
   patientId,
   file,
   category = "admin",
+}: PatientScopedParams & {
+  file: File;
+  category?: string;
 }) {
   const formData = new FormData();
-  formData.append("patient_id", patientId);
+  formData.append("patient_id", String(patientId));
   formData.append("file", file);
   formData.append("name", file.name);
   formData.append("category", category);
@@ -54,7 +83,10 @@ export function uploadPatientDocument({
   });
 }
 
-export function fetchPatientDocuments({ facilityId, patientId } = {}) {
+export function fetchPatientDocuments({
+  facilityId,
+  patientId,
+}: PatientScopedParams = {}) {
   return apiRequest("/patients/documents/", {
     params: {
       facility_id: facilityId,
@@ -63,13 +95,20 @@ export function fetchPatientDocuments({ facilityId, patientId } = {}) {
   });
 }
 
-export function fetchDocumentCategories({ facilityId } = {}) {
+export function fetchDocumentCategories({
+  facilityId,
+}: FacilityScopedParams = {}) {
   return apiRequest("/patients/document-categories/", {
     params: { facility_id: facilityId },
   });
 }
 
-export function createDocumentCategory({ facilityId, values }) {
+export function createDocumentCategory({
+  facilityId,
+  values,
+}: FacilityScopedParams & {
+  values: ApiPayload;
+}) {
   return apiRequest("/patients/document-categories/", {
     method: "POST",
     params: { facility_id: facilityId },
@@ -77,7 +116,14 @@ export function createDocumentCategory({ facilityId, values }) {
   });
 }
 
-export function updateDocumentCategory({ facilityId, categoryId, values }) {
+export function updateDocumentCategory({
+  facilityId,
+  categoryId,
+  values,
+}: FacilityScopedParams & {
+  categoryId: EntityId;
+  values: ApiPayload;
+}) {
   return apiRequest(`/patients/document-categories/${categoryId}/`, {
     method: "PATCH",
     params: { facility_id: facilityId },
@@ -85,14 +131,22 @@ export function updateDocumentCategory({ facilityId, categoryId, values }) {
   });
 }
 
-export function deleteDocumentCategory({ facilityId, categoryId }) {
+export function deleteDocumentCategory({
+  facilityId,
+  categoryId,
+}: FacilityScopedParams & {
+  categoryId: EntityId;
+}) {
   return apiRequest(`/patients/document-categories/${categoryId}/`, {
     method: "DELETE",
     params: { facility_id: facilityId },
   });
 }
 
-export async function openPatientDocumentBundle({ facilityId, documents }) {
+export async function openPatientDocumentBundle({
+  facilityId,
+  documents,
+}: PatientDocumentBundleParams) {
   const response = await apiBlobRequest("/patients/documents/bundle/view/", {
     method: "POST",
     params: { facility_id: facilityId },
@@ -106,7 +160,10 @@ export async function openPatientDocumentBundle({ facilityId, documents }) {
   openBlob(response.blob, "patient-documents.pdf");
 }
 
-export async function downloadPatientDocumentBundle({ facilityId, documents }) {
+export async function downloadPatientDocumentBundle({
+  facilityId,
+  documents,
+}: PatientDocumentBundleParams) {
   const response = await apiBlobRequest(
     "/patients/documents/bundle/download/",
     {
@@ -129,7 +186,10 @@ export async function downloadPatientDocumentBundle({ facilityId, documents }) {
   );
 }
 
-export async function openPatientDocument({ facilityId, document }) {
+export async function openPatientDocument({
+  facilityId,
+  document,
+}: PatientDocumentParams) {
   const response = await apiBlobRequest(
     `/patients/documents/${document.id}/view/`,
     {
@@ -142,7 +202,10 @@ export async function openPatientDocument({ facilityId, document }) {
   );
 }
 
-export async function getPatientDocumentPreview({ facilityId, document }) {
+export async function getPatientDocumentPreview({
+  facilityId,
+  document,
+}: PatientDocumentParams) {
   const response = await apiBlobRequest(
     `/patients/documents/${document.id}/view/`,
     {
@@ -161,7 +224,10 @@ export async function getPatientDocumentPreview({ facilityId, document }) {
   };
 }
 
-export async function downloadPatientDocument({ facilityId, document }) {
+export async function downloadPatientDocument({
+  facilityId,
+  document,
+}: PatientDocumentParams) {
   const response = await apiBlobRequest(
     `/patients/documents/${document.id}/download/`,
     {

@@ -1,11 +1,24 @@
 import { apiRequest } from "../../../shared/api/client";
 
+import type {
+  ApiPayload,
+  ApiParamValue,
+  EntityId,
+} from "../../../shared/api/types";
+
+type FetchAppointmentsParams = {
+  facilityId?: EntityId | null;
+  date?: ApiParamValue;
+  dateTo?: ApiParamValue;
+  patientId?: EntityId | null;
+};
+
 export function fetchAppointments({
   facilityId,
   date,
   dateTo,
   patientId,
-} = {}) {
+}: FetchAppointmentsParams = {}) {
   return apiRequest("/appointments/", {
     params: {
       facility_id: facilityId,
@@ -16,7 +29,13 @@ export function fetchAppointments({
   });
 }
 
-export function fetchAppointmentHeatmap({ facilityId, month } = {}) {
+export function fetchAppointmentHeatmap({
+  facilityId,
+  month,
+}: {
+  facilityId?: EntityId | null;
+  month?: ApiParamValue;
+} = {}) {
   return apiRequest("/appointments/heatmap/", {
     params: {
       facility_id: facilityId,
@@ -25,7 +44,10 @@ export function fetchAppointmentHeatmap({ facilityId, month } = {}) {
   });
 }
 
-export function createAppointment(facilityId, data) {
+export function createAppointment(
+  facilityId: EntityId | null | undefined,
+  data: ApiPayload
+) {
   return apiRequest("/appointments/", {
     method: "POST",
     params: { facility_id: facilityId },
@@ -33,7 +55,11 @@ export function createAppointment(facilityId, data) {
   });
 }
 
-export function updateAppointment(facilityId, id, data) {
+export function updateAppointment(
+  facilityId: EntityId | null | undefined,
+  id: EntityId,
+  data: ApiPayload
+) {
   return apiRequest(`/appointments/${id}/`, {
     method: "PUT",
     params: { facility_id: facilityId },
@@ -41,14 +67,20 @@ export function updateAppointment(facilityId, id, data) {
   });
 }
 
-export function deleteAppointment(facilityId, id) {
+export function deleteAppointment(
+  facilityId: EntityId | null | undefined,
+  id: EntityId
+) {
   return apiRequest(`/appointments/${id}/`, {
     method: "DELETE",
     params: { facility_id: facilityId },
   });
 }
 
-export function fetchAppointmentHistory(facilityId, id) {
+export function fetchAppointmentHistory(
+  facilityId: EntityId | null | undefined,
+  id: EntityId
+) {
   return apiRequest(`/appointments/${id}/history/`, {
     params: { facility_id: facilityId },
   });

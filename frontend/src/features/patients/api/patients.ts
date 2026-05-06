@@ -1,5 +1,20 @@
 import { apiRequest } from "../../../shared/api/client";
 
+import type {
+  ApiParamValue,
+  ApiPayload,
+  EntityId,
+} from "../../../shared/api/types";
+
+type PatientSearchParams = {
+  facilityId?: EntityId | null;
+  search?: ApiParamValue;
+  name?: ApiParamValue;
+  date_of_birth?: ApiParamValue;
+  chart_number?: ApiParamValue;
+  phone?: ApiParamValue;
+};
+
 export function searchPatients({
   facilityId,
   search,
@@ -7,7 +22,7 @@ export function searchPatients({
   date_of_birth,
   chart_number,
   phone,
-} = {}) {
+}: PatientSearchParams = {}) {
   return apiRequest("/patients/", {
     params: {
       facility_id: facilityId,
@@ -20,7 +35,10 @@ export function searchPatients({
   });
 }
 
-export function createPatient(data, facilityId) {
+export function createPatient(
+  data: ApiPayload,
+  facilityId: EntityId | null | undefined
+) {
   return apiRequest("/patients/", {
     method: "POST",
     params: {
@@ -30,7 +48,11 @@ export function createPatient(data, facilityId) {
   });
 }
 
-export function updatePatient(id, data, facilityId) {
+export function updatePatient(
+  id: EntityId,
+  data: ApiPayload,
+  facilityId: EntityId | null | undefined
+) {
   return apiRequest(`/patients/${id}/`, {
     method: "PUT",
     params: {
@@ -40,7 +62,11 @@ export function updatePatient(id, data, facilityId) {
   });
 }
 
-export function patchPatient(id, partialData, facilityId) {
+export function patchPatient(
+  id: EntityId,
+  partialData: ApiPayload,
+  facilityId: EntityId | null | undefined
+) {
   return apiRequest(`/patients/${id}/`, {
     method: "PATCH",
     params: {
@@ -50,7 +76,10 @@ export function patchPatient(id, partialData, facilityId) {
   });
 }
 
-export function deletePatient(id, facilityId) {
+export function deletePatient(
+  id: EntityId,
+  facilityId: EntityId | null | undefined
+) {
   return apiRequest(`/patients/${id}/`, {
     method: "DELETE",
     params: {
@@ -59,7 +88,10 @@ export function deletePatient(id, facilityId) {
   });
 }
 
-export function fetchPatientById(id, facilityId) {
+export function fetchPatientById(
+  id: EntityId,
+  facilityId: EntityId | null | undefined
+) {
   return apiRequest(`/patients/${id}/`, {
     params: {
       facility_id: facilityId,
@@ -67,7 +99,10 @@ export function fetchPatientById(id, facilityId) {
   });
 }
 
-export function revealPatientSsn(id, facilityId) {
+export function revealPatientSsn(
+  id: EntityId,
+  facilityId: EntityId | null | undefined
+) {
   return apiRequest(`/patients/${id}/reveal-ssn/`, {
     params: {
       facility_id: facilityId,

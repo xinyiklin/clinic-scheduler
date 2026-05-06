@@ -1,6 +1,8 @@
 import { apiRequest } from "../../../shared/api/client";
 
-export function login(credentials) {
+import type { ApiPayload } from "../../../shared/api/types";
+
+export function login(credentials: ApiPayload) {
   return apiRequest("/users/token/", {
     method: "POST",
     body: JSON.stringify(credentials),
@@ -20,7 +22,7 @@ export function refreshToken() {
   });
 }
 
-export function registerUser(data) {
+export function registerUser(data: ApiPayload) {
   return apiRequest("/users/register/", {
     method: "POST",
     body: JSON.stringify(data),
@@ -31,7 +33,7 @@ export function fetchUserProfile() {
   return apiRequest("/users/me/");
 }
 
-export function updateUserPreferences(preferences) {
+export function updateUserPreferences(preferences: ApiPayload) {
   return apiRequest("/users/me/preferences/", {
     method: "PATCH",
     body: JSON.stringify({ preferences }),
