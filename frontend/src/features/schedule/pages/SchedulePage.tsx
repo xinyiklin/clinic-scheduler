@@ -1,0 +1,634 @@
+import { useMemo, useState, useCallback, useEffect } from "react";
+import type { MouseEvent } from "react";
+
+import ScheduleWorkspaceLayout from "../components/ScheduleWorkspaceLayout";
+import SchedulePageOverlays from "./SchedulePageOverlays";
+
+import formatAppointments from "../../appointments/utils/formatAppointments";
+
+import useAppointments from "../../appointments/hooks/useAppointments";
+import useAppointmentMutations from "../../appointments/hooks/useAppointmentMutations";
+import useAppointmentFlow from "../../appointments/hooks/useAppointmentFlow";
+import { beginAppointmentEditSession } from "../../appointments/api/appointments";
+import useSchedulePageColumns from "../hooks/useSchedulePageColumns";
+import useFacility from "../../facilities/hooks/useFacility";
+import useFacilityConfig from "../../facilities/hooks/useFacilityConfig";
+import { usePatientFlowContext } from "../../patients/PatientFlowProvider";
+import { Notice } from "../../../shared/components/ui";
+import WorkspaceShell from "../../../shared/components/WorkspaceShell";
+import { useBootReadiness } from "../../../app/BootReadinessContext";
+import { useUserPreferences } from "../../../shared/context/UserPreferencesProvider";
+import {
+  SCHEDULE_QUICK_ACTION_EVENT,
+  SCHEDULE_QUICK_ACTION_STORAGE_KEY,
+} from "../../../shared/constants/quickActions";
+import { getPatientChartName } from "../../patients/utils/patientDisplay";
+
+import type { EntityId } from "../../../shared/api/types";
+import type { ApiRecord, AppointmentLike } from "../../../shared/types/domain";
+import type {
+  AppointmentPatient,
+  AppointmentResource,
+  AppointmentStaff,
+  AppointmentStatusOption,
+  AppointmentSubmitPayload,
+  AppointmentTypeOption,
+} from "../../appointments/types";
+import type {
+  ScheduleConfirmDialogState,
+  ScheduleContextMenuState,
+  ScheduleEditBlockedDialogState,
+  ScheduleFacilityOption,
+  ScheduleHistoryModalState,
+} from "../types";
+
+type AppointmentFlowOptions = Parameters<typeof useAppointmentFlow>[0];
+
+export default function SchedulePage() {
+  const { facility, selectedFacilityId } = useFacility();
+  const { physicians, staffs, resources, statusOptions, typeOptions } =
+    useFacilityConfig();
+  const { openPatientSearch, patientFlow, recentPatients } =
+    usePatientFlowContext();
+  const { setRouteReady } = useBootReadiness();
+  const { preferences, updatePreferences } = useUserPreferences();
+  const scheduleResources = resources as ScheduleFacilityOption[];
+  const appointmentPhysicians = physicians as unknown as AppointmentStaff[];
+  const appointmentStaffs = staffs as unknown as AppointmentStaff[];
+  const appointmentResources = resources as unknown as AppointmentResource[];
+  const appointmentStatusOptions =
+    statusOptions as unknown as AppointmentStatusOption[];
+  const appointmentTypeOptions =
+    typeOptions as unknown as AppointmentTypeOption[];
+  const appointmentRecentPatients =
+    recentPatients as unknown as AppointmentPatient[];
+  const appointmentFlowPhysicians =
+    physicians as unknown as AppointmentFlowOptions["physicians"];
+  const appointmentFlowStaffs = staffs as unknown as NonNullable<
+    AppointmentFlowOptions["staffs"]
+  >;
+  const appointmentFlowResources =
+    resources as unknown as AppointmentFlowOptions["resources"];
+  const appointmentFlowStatusOptions =
+    statusOptions as unknown as AppointmentFlowOptions["statusOptions"];
+  const appointmentFlowTypeOptions =
+    typeOptions as unknown as AppointmentFlowOptions["typeOptions"];
+
+  const [appError, setAppError] = useState("");
+  const viewMode = preferences.scheduleViewMode;
+  const showSlotDividers = preferences.showScheduleSlotDividers;
+  const {
+    activeColumnResourceKeys,
+    activeScheduleInterval,
+    effectiveVisibleDates,
+    handleColumnResourceKeysChange,
+    handleJumpToToday,
+    handleQuickActionToday,
+    handleScheduleIntervalChange,
+    handleScheduleModeChange,
+    handleSelectScheduleDate,
+    handleToggleScheduleResource,
+    handleVisibleDatesChange,
+    lastVisibleDate,
+    multiDayResourceKey,
+    queryDate,
+    resourceDefinitions,
+    scheduleMode,
+    selectedDate,
+    setActiveVisibleDayCount,
+    setVisibleColumnIntervals,
+    visibleColumnIntervals,
+    visibleColumnResourceKeys,
+    visibleDayCount,
+  } = useSchedulePageColumns({
+    facility,
+    preferences,
+    resources: scheduleResources,
+  });
+
+  const [confirmDialogState, setConfirmDialogState] =
+    useState<ScheduleConfirmDialogState>({
+      isOpen: false,
+      title: "",
+      message: "",
+      confirmText: "Confirm",
+      cancelText: "Cancel",
+      variant: "default",
+      onConfirm: null,
+    });
+  const [historyModalState, setHistoryModalState] =
+    useState<ScheduleHistoryModalState>({
+      isOpen: false,
+      appointmentId: null,
+      patientName: null,
+      appointmentTime: null,
+    });
+  const [contextMenuState, setContextMenuState] =
+    useState<ScheduleContextMenuState>({
+      isOpen: false,
+      x: 0,
+      y: 0,
+      appointment: null,
+    });
+  const [editBlockedDialogState, setEditBlockedDialogState] =
+    useState<ScheduleEditBlockedDialogState>({
+      isOpen: false,
+      activeEditor: null,
+    });
+
+  const {
+    appointments,
+    loading: appointmentsLoading,
+    error: appointmentsError,
+  } = useAppointments({
+    facilityId: selectedFacilityId,
+    date: queryDate,
+    dateTo: lastVisibleDate,
+  });
+
+  useEffect(() => {
+    if (!selectedFacilityId || !selectedDate || !queryDate) return;
+    if (appointmentsLoading) return;
+    setRouteReady(true);
+  }, [
+    appointmentsLoading,
+    queryDate,
+    selectedDate,
+    selectedFacilityId,
+    setRouteReady,
+  ]);
+  const appointmentFlow = useAppointmentFlow({
+    facility,
+    physicians: appointmentFlowPhysicians,
+    staffs: appointmentFlowStaffs,
+    resources: appointmentFlowResources,
+    statusOptions: appointmentFlowStatusOptions,
+    typeOptions: appointmentFlowTypeOptions,
+    selectedDate,
+  });
+  const { open: openAppointmentModal } = appointmentFlow.modal;
+
+  const handleScheduleQuickAction = useCallback(
+    (type: string | null | undefined) => {
+      if (!type) return false;
+
+      if (type === "new-appointment") {
+        if (!selectedDate) return false;
+        openAppointmentModal({
+          mode: "create",
+          resourceId:
+            scheduleMode === "days"
+              ? multiDayResourceKey || visibleColumnResourceKeys[0] || ""
+              : visibleColumnResourceKeys[0] || "",
+        });
+        return true;
+      }
+
+      if (type === "today") {
+        return handleQuickActionToday();
+      }
+
+      if (type === "view:slot" || type === "view:agenda") {
+        updatePreferences({
+          scheduleViewMode: type === "view:slot" ? "slot" : "agenda",
+        });
+        return true;
+      }
+
+      return false;
+    },
+    [
+      handleQuickActionToday,
+      multiDayResourceKey,
+      openAppointmentModal,
+      scheduleMode,
+      selectedDate,
+      updatePreferences,
+      visibleColumnResourceKeys,
+    ]
+  );
+
+  useEffect(() => {
+    const consumePendingAction = (type: string | null | undefined) => {
+      if (!handleScheduleQuickAction(type)) return;
+      sessionStorage.removeItem(SCHEDULE_QUICK_ACTION_STORAGE_KEY);
+    };
+
+    consumePendingAction(
+      sessionStorage.getItem(SCHEDULE_QUICK_ACTION_STORAGE_KEY)
+    );
+
+    const handleWindowAction = (event: Event) => {
+      const actionEvent = event as CustomEvent<{ type?: string }>;
+      consumePendingAction(actionEvent.detail?.type);
+    };
+
+    window.addEventListener(SCHEDULE_QUICK_ACTION_EVENT, handleWindowAction);
+    return () =>
+      window.removeEventListener(
+        SCHEDULE_QUICK_ACTION_EVENT,
+        handleWindowAction
+      );
+  }, [handleScheduleQuickAction]);
+
+  const handleCloseAppointmentModal = () => {
+    setAppError("");
+    closeConfirmDialog();
+    closeAppointmentContextMenu();
+    appointmentFlow.modal.close();
+  };
+
+  const {
+    deleteMutation,
+    saveMutation,
+    moveMutation,
+    getDuplicateDayAppointmentError,
+  } = useAppointmentMutations({
+    onCloseModal: handleCloseAppointmentModal,
+    setError: setAppError,
+  });
+
+  const openConfirmDialog = (
+    opts: Omit<Partial<ScheduleConfirmDialogState>, "isOpen"> &
+      Pick<ScheduleConfirmDialogState, "title" | "message">
+  ) =>
+    setConfirmDialogState({
+      isOpen: true,
+      title: opts.title,
+      message: opts.message,
+      confirmText: opts.confirmText || "Confirm",
+      cancelText: opts.cancelText || "Cancel",
+      variant: opts.variant || "default",
+      onConfirm: opts.onConfirm || null,
+    });
+  const closeConfirmDialog = () =>
+    setConfirmDialogState({
+      isOpen: false,
+      title: "",
+      message: "",
+      confirmText: "Confirm",
+      cancelText: "Cancel",
+      variant: "default",
+      onConfirm: null,
+    });
+  const handleConfirmDialogConfirm = async () => {
+    if (!confirmDialogState.onConfirm) return;
+    await confirmDialogState.onConfirm();
+    closeConfirmDialog();
+  };
+
+  const handleSubmitAppointment = async (
+    submittedData: AppointmentSubmitPayload
+  ) => {
+    setAppError("");
+    const buildPayload = (overrides: ApiRecord = {}) => ({
+      ...submittedData,
+      patient: appointmentFlow.selectedPatient?.id || "",
+      resource: submittedData.resource ? Number(submittedData.resource) : null,
+      rendering_provider: submittedData.rendering_provider
+        ? Number(submittedData.rendering_provider)
+        : null,
+      status: submittedData.status ? Number(submittedData.status) : "",
+      appointment_type: submittedData.appointment_type
+        ? Number(submittedData.appointment_type)
+        : "",
+      facility: submittedData.facility ? Number(submittedData.facility) : "",
+      ...overrides,
+    });
+
+    try {
+      await saveMutation.mutateAsync({
+        id: appointmentFlow.modal.editingId,
+        data: buildPayload(),
+      });
+    } catch (err) {
+      const duplicateError = getDuplicateDayAppointmentError(err);
+      if (!duplicateError) return;
+      setAppError("");
+      openConfirmDialog({
+        title: "Possible Double Booking",
+        message:
+          "This patient already has an appointment on this date. Creating another appointment may result in a double booking. Do you want to proceed anyway?",
+        confirmText: "Confirm",
+        variant: "warning",
+        onConfirm: async () => {
+          await saveMutation.mutateAsync({
+            id: appointmentFlow.modal.editingId,
+            data: buildPayload({ allow_same_day_double_book: true }),
+          });
+        },
+      });
+    }
+  };
+
+  const handleDeleteAppointment = () => {
+    const appointmentId = appointmentFlow.modal.editingId;
+    if (!appointmentId) return;
+    openConfirmDialog({
+      title: "Delete Appointment",
+      message:
+        "Are you sure you want to delete this appointment? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+      onConfirm: async () => {
+        await deleteMutation.mutateAsync(appointmentId);
+      },
+    });
+  };
+
+  const handleDeleteAppointmentFromMenu = (appointment: AppointmentLike) => {
+    const appointmentId = appointment?.id;
+    if (!appointmentId) return;
+    openConfirmDialog({
+      title: "Delete Appointment",
+      message:
+        "Are you sure you want to delete this appointment? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+      onConfirm: async () => {
+        await deleteMutation.mutateAsync(appointmentId);
+      },
+    });
+  };
+
+  const handleOpenAppointmentHistory = (
+    appointment: AppointmentLike | null = null
+  ) => {
+    if (!appointmentFlow.modal.editingId && !appointment?.id) return;
+    setHistoryModalState({
+      isOpen: true,
+      appointmentId: appointment?.id || appointmentFlow.modal.editingId,
+      patientName:
+        (appointment
+          ? getPatientChartName(appointment, appointment.patient_name || "")
+          : getPatientChartName(appointmentFlow.selectedPatient, "")) || null,
+      appointmentTime:
+        appointment?.appointment_time ||
+        appointmentFlow.modal.formData.appointment_time,
+    });
+  };
+
+  const handleCloseAppointmentHistory = () => {
+    setHistoryModalState({
+      isOpen: false,
+      appointmentId: null,
+      patientName: null,
+      appointmentTime: null,
+    });
+  };
+
+  const openAppointmentContextMenu = (
+    event: MouseEvent<HTMLDivElement>,
+    appointment: AppointmentLike
+  ) => {
+    setContextMenuState({
+      isOpen: true,
+      x: event.clientX,
+      y: event.clientY,
+      appointment,
+    });
+  };
+
+  const closeAppointmentContextMenu = useCallback(() => {
+    setContextMenuState({
+      isOpen: false,
+      x: 0,
+      y: 0,
+      appointment: null,
+    });
+  }, []);
+
+  const closeEditBlockedDialog = useCallback(() => {
+    setEditBlockedDialogState({
+      isOpen: false,
+      activeEditor: null,
+    });
+  }, []);
+
+  const showEditBlockedDialog = useCallback(
+    (activeEditor: ScheduleEditBlockedDialogState["activeEditor"]) => {
+      setEditBlockedDialogState({
+        isOpen: true,
+        activeEditor,
+      });
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!contextMenuState.isOpen) return undefined;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeAppointmentContextMenu();
+      }
+    };
+
+    const handleScroll = () => {
+      closeAppointmentContextMenu();
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    window.addEventListener("scroll", handleScroll, true);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [closeAppointmentContextMenu, contextMenuState.isOpen]);
+
+  const handleDropAppointment = async (
+    date: string,
+    time24: string,
+    dragged: AppointmentLike,
+    nextResourceId?: EntityId | null
+  ) => {
+    const appointmentId = dragged?.id;
+    if (!appointmentId) return;
+    const resourceId =
+      nextResourceId !== undefined ? nextResourceId : dragged.resource || null;
+    const buildPayload = (overrides: ApiRecord = {}) => ({
+      patient: dragged.patient_id,
+      resource: resourceId,
+      rendering_provider: dragged.rendering_provider || null,
+      appointment_time: `${date}T${time24}`,
+      room: dragged.room || "",
+      reason: dragged.reason || "",
+      notes: dragged.notes || "",
+      status: dragged.status,
+      appointment_type: dragged.appointment_type,
+      facility: dragged.facility,
+      ...overrides,
+    });
+
+    try {
+      await moveMutation.mutateAsync({
+        id: appointmentId,
+        data: buildPayload(),
+      });
+    } catch (err) {
+      const duplicateError = getDuplicateDayAppointmentError(err);
+      if (!duplicateError) return;
+      setAppError("");
+      openConfirmDialog({
+        title: "Possible Double Booking",
+        message:
+          "This patient already has an appointment on this date. Moving this appointment may result in a double booking. Do you want to proceed anyway?",
+        confirmText: "Confirm",
+        cancelText: "Cancel",
+        variant: "warning",
+        onConfirm: async () => {
+          await moveMutation.mutateAsync({
+            id: appointmentId,
+            data: buildPayload({ allow_same_day_double_book: true }),
+          });
+        },
+      });
+    }
+  };
+
+  const handleOpenEdit = useCallback(
+    async (appointment: AppointmentLike) => {
+      if (!appointment?.id || !selectedFacilityId) return;
+
+      closeAppointmentContextMenu();
+      setAppError("");
+
+      try {
+        const result = await beginAppointmentEditSession(
+          selectedFacilityId,
+          appointment.id
+        );
+
+        if (result?.status === "occupied") {
+          showEditBlockedDialog(result.active_editor || null);
+          return;
+        }
+
+        openAppointmentModal({ mode: "edit", appointment });
+      } catch {
+        setAppError("Appointment could not be opened. Try again.");
+      }
+    },
+    [
+      closeAppointmentContextMenu,
+      openAppointmentModal,
+      selectedFacilityId,
+      showEditBlockedDialog,
+    ]
+  );
+
+  const handleOpenDuplicate = useCallback(
+    (appointment: AppointmentLike) =>
+      appointmentFlow.modal.openDuplicate(appointment),
+    [appointmentFlow.modal]
+  );
+
+  const handleOpenPatientHub = useCallback(
+    (appointment: AppointmentLike) => {
+      if (!appointment?.patient_id) return;
+      patientFlow.hub.openById(appointment.patient_id);
+    },
+    [patientFlow.hub]
+  );
+
+  const handleOpenFromSlot = useCallback(
+    (date: string, time24: string, resourceId: EntityId | "" = "") =>
+      appointmentFlow.modal.openFromSlot(date, time24, resourceId),
+    [appointmentFlow.modal]
+  );
+
+  const formattedAppointments = useMemo(
+    () => formatAppointments(appointments, handleOpenEdit, facility?.timezone),
+    [appointments, handleOpenEdit, facility?.timezone]
+  );
+
+  return (
+    <WorkspaceShell
+      beforePanel={
+        <>
+          {appError && !appointmentFlow.modal.isOpen ? (
+            <Notice tone="danger" className="mb-4 shrink-0">
+              {appError}
+            </Notice>
+          ) : null}
+
+          {appointmentsError ? (
+            <Notice
+              tone="danger"
+              title="Appointments could not be loaded"
+              className="mb-4 shrink-0"
+            >
+              Failed to load appointments. {appointmentsError}
+            </Notice>
+          ) : null}
+        </>
+      }
+      afterPanel={
+        <SchedulePageOverlays
+          appError={appError}
+          appointmentFlow={appointmentFlow}
+          confirmDialogState={confirmDialogState}
+          contextMenuState={contextMenuState}
+          editBlockedDialogState={editBlockedDialogState}
+          facility={facility}
+          handleCloseAppointmentHistory={handleCloseAppointmentHistory}
+          handleCloseAppointmentModal={handleCloseAppointmentModal}
+          handleConfirmDialogConfirm={handleConfirmDialogConfirm}
+          handleDeleteAppointment={handleDeleteAppointment}
+          handleDeleteAppointmentFromMenu={handleDeleteAppointmentFromMenu}
+          handleOpenAppointmentHistory={handleOpenAppointmentHistory}
+          handleOpenDuplicate={handleOpenDuplicate}
+          handleOpenEdit={handleOpenEdit}
+          handleOpenPatientHub={handleOpenPatientHub}
+          handleSubmitAppointment={handleSubmitAppointment}
+          historyModalState={historyModalState}
+          onCloseAppointmentContextMenu={closeAppointmentContextMenu}
+          onCloseConfirmDialog={closeConfirmDialog}
+          onCloseEditBlockedDialog={closeEditBlockedDialog}
+          onEditSessionBlocked={showEditBlockedDialog}
+          onOpenPatientSearch={openPatientSearch}
+          patientFlow={patientFlow}
+          physicians={appointmentPhysicians}
+          recentPatients={appointmentRecentPatients}
+          resources={appointmentResources}
+          selectedFacilityId={selectedFacilityId}
+          staffs={appointmentStaffs}
+          statusOptions={appointmentStatusOptions}
+          typeOptions={appointmentTypeOptions}
+        />
+      }
+    >
+      <ScheduleWorkspaceLayout
+        facilityId={selectedFacilityId}
+        facility={facility}
+        selectedDate={selectedDate}
+        scheduleMode={scheduleMode}
+        viewMode={viewMode}
+        showSlotDividers={showSlotDividers}
+        appointmentBlockDisplay={preferences.appointmentBlockDisplay}
+        activeScheduleInterval={activeScheduleInterval}
+        formattedAppointments={formattedAppointments}
+        resourceDefinitions={resourceDefinitions}
+        activeColumnResourceKeys={activeColumnResourceKeys}
+        effectiveVisibleDates={effectiveVisibleDates}
+        visibleColumnIntervals={visibleColumnIntervals}
+        visibleDayCount={visibleDayCount}
+        onSelectDate={handleSelectScheduleDate}
+        onJumpToToday={handleJumpToToday}
+        onScheduleModeChange={handleScheduleModeChange}
+        onScheduleIntervalChange={handleScheduleIntervalChange}
+        onToggleResource={handleToggleScheduleResource}
+        onVisibleDatesChange={handleVisibleDatesChange}
+        onColumnResourceKeysChange={handleColumnResourceKeysChange}
+        onVisibleDayCountChange={setActiveVisibleDayCount}
+        onSlotDoubleClick={handleOpenFromSlot}
+        onAppointmentDrop={handleDropAppointment}
+        onAppointmentContextMenu={openAppointmentContextMenu}
+        onColumnIntervalsChange={setVisibleColumnIntervals}
+      />
+    </WorkspaceShell>
+  );
+}
