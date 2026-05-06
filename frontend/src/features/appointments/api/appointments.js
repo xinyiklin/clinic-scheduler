@@ -53,3 +53,26 @@ export function fetchAppointmentHistory(facilityId, id) {
     params: { facility_id: facilityId },
   });
 }
+
+export function beginAppointmentEditSession(facilityId, id) {
+  return apiRequest(`/appointments/${id}/edit-session/`, {
+    method: "POST",
+    params: { facility_id: facilityId },
+    body: JSON.stringify({}),
+  });
+}
+
+export function heartbeatAppointmentEditSession(facilityId, id) {
+  return apiRequest(`/appointments/${id}/edit-session/`, {
+    method: "PATCH",
+    params: { facility_id: facilityId },
+    body: JSON.stringify({}),
+  });
+}
+
+export function releaseAppointmentEditSession(facilityId, id) {
+  return apiRequest(`/appointments/${id}/edit-session/`, {
+    method: "DELETE",
+    params: { facility_id: facilityId },
+  });
+}

@@ -1,11 +1,12 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 
-from appointments.models import Appointment
+from appointments.models import Appointment, AppointmentEditSession
 from audit.models import AuditEvent
 from facilities.models import (
     AppointmentStatus,
@@ -114,6 +115,28 @@ class AppointmentViewSetTests(TestCase):
             facility=self.facility,
             created_by=self.user,
         )
+
+    def create_scheduler_user(self, username="second-scheduler"):
+        user = User.objects.create_user(
+            username=username,
+            password="testpass123",
+            email=f"{username}@example.com",
+            first_name="Second",
+            last_name="Scheduler",
+        )
+        OrganizationMembership.objects.create(
+            user=user,
+            organization=self.organization,
+            role=OrganizationMembership.ROLE_MEMBER,
+            is_active=True,
+        )
+        Staff.objects.create(
+            user=user,
+            facility=self.facility,
+            role=StaffRole.objects.get(facility=self.facility, code="admin"),
+            is_active=True,
+        )
+        return user
 
     def test_list_filters_by_facility_local_date_range(self):
         facility_tz = ZoneInfo(str(self.facility.timezone))
@@ -392,6 +415,155 @@ class AppointmentViewSetTests(TestCase):
         self.assertIsNone(appointment.rendering_provider)
         self.assertEqual(appointment.rendering_provider_name, "")
         self.assertEqual(response.data["rendering_provider_name"], "")
+
+    def test_edit_session_acquires_current_user_lease(self):
+        facility_tz = ZoneInfo(str(self.facility.timezone))
+        appointment = self.create_appointment(
+            local_time=datetime(2026, 4, 22, 9, 0, tzinfo=facility_tz),
+        )
+
+        response = self.client.post(
+            f"/v1/appointments/{appointment.pk}/edit-session/",
+            {"override": False},
+            format="json",
+            HTTP_HOST="localhost:8000",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], "active")
+        self.assertFalse(response.data["can_override"])
+        session = AppointmentEditSession.objects.get(appointment=appointment)
+        self.assertEqual(session.user, self.user)
+        self.assertEqual(session.user_display_name, "Schedule User")
+
+    def test_edit_session_warns_when_another_user_is_active(self):
+        facility_tz = ZoneInfo(str(self.facility.timezone))
+        appointment = self.create_appointment(
+            local_time=datetime(2026, 4, 22, 9, 0, tzinfo=facility_tz),
+        )
+        AppointmentEditSession.objects.create(
+            appointment=appointment,
+            user=self.user,
+            user_display_name="Schedule User",
+        )
+        second_user = self.create_scheduler_user()
+        self.client.force_authenticate(second_user)
+
+        response = self.client.post(
+            f"/v1/appointments/{appointment.pk}/edit-session/",
+            {"override": False},
+            format="json",
+            HTTP_HOST="localhost:8000",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], "occupied")
+        self.assertFalse(response.data["can_override"])
+        self.assertEqual(response.data["active_editor"]["user_name"], "Schedule User")
+        self.assertEqual(
+            AppointmentEditSession.objects.get(appointment=appointment).user,
+            self.user,
+        )
+
+    def test_edit_session_does_not_override_active_editor(self):
+        facility_tz = ZoneInfo(str(self.facility.timezone))
+        appointment = self.create_appointment(
+            local_time=datetime(2026, 4, 22, 9, 0, tzinfo=facility_tz),
+        )
+        AppointmentEditSession.objects.create(
+            appointment=appointment,
+            user=self.user,
+            user_display_name="Schedule User",
+        )
+        second_user = self.create_scheduler_user()
+        self.client.force_authenticate(second_user)
+
+        response = self.client.post(
+            f"/v1/appointments/{appointment.pk}/edit-session/",
+            {"override": True},
+            format="json",
+            HTTP_HOST="localhost:8000",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], "occupied")
+        self.assertFalse(response.data["can_override"])
+        session = AppointmentEditSession.objects.get(appointment=appointment)
+        self.assertEqual(session.user, self.user)
+        self.assertEqual(session.user_display_name, "Schedule User")
+
+    def test_edit_session_allows_takeover_after_stale_lease(self):
+        facility_tz = ZoneInfo(str(self.facility.timezone))
+        appointment = self.create_appointment(
+            local_time=datetime(2026, 4, 22, 9, 0, tzinfo=facility_tz),
+        )
+        AppointmentEditSession.objects.create(
+            appointment=appointment,
+            user=self.user,
+            user_display_name="Schedule User",
+            last_seen_at=timezone.now() - timedelta(minutes=11),
+        )
+        second_user = self.create_scheduler_user()
+        self.client.force_authenticate(second_user)
+
+        response = self.client.post(
+            f"/v1/appointments/{appointment.pk}/edit-session/",
+            {"override": False},
+            format="json",
+            HTTP_HOST="localhost:8000",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], "active")
+        self.assertEqual(
+            AppointmentEditSession.objects.get(appointment=appointment).user,
+            second_user,
+        )
+
+    def test_edit_session_heartbeat_and_release_current_user_only(self):
+        facility_tz = ZoneInfo(str(self.facility.timezone))
+        appointment = self.create_appointment(
+            local_time=datetime(2026, 4, 22, 9, 0, tzinfo=facility_tz),
+        )
+        second_user = self.create_scheduler_user()
+        session = AppointmentEditSession.objects.create(
+            appointment=appointment,
+            user=self.user,
+            user_display_name="Schedule User",
+        )
+        previous_seen_at = session.last_seen_at
+
+        response = self.client.patch(
+            f"/v1/appointments/{appointment.pk}/edit-session/",
+            {},
+            format="json",
+            HTTP_HOST="localhost:8000",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], "active")
+        session.refresh_from_db()
+        self.assertGreaterEqual(session.last_seen_at, previous_seen_at)
+
+        self.client.force_authenticate(second_user)
+        response = self.client.delete(
+            f"/v1/appointments/{appointment.pk}/edit-session/",
+            HTTP_HOST="localhost:8000",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            AppointmentEditSession.objects.filter(appointment=appointment).exists()
+        )
+
+        self.client.force_authenticate(self.user)
+        response = self.client.delete(
+            f"/v1/appointments/{appointment.pk}/edit-session/",
+            HTTP_HOST="localhost:8000",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            AppointmentEditSession.objects.filter(appointment=appointment).exists()
+        )
 
     def test_history_returns_created_and_updated_entries(self):
         appointment = Appointment.objects.create(
