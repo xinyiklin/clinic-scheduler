@@ -1,20 +1,31 @@
 import { getAppointmentDurationMinutes, toMinutes } from "./scheduleGridMath";
 
-function alignMinuteDown(totalMinutes, intervalMinutes) {
+import type {
+  AppointmentLike,
+  ScheduleWindow,
+} from "../../../shared/types/domain";
+
+function alignMinuteDown(
+  totalMinutes: number,
+  intervalMinutes: number
+): number {
   return Math.max(
     0,
     Math.floor(totalMinutes / intervalMinutes) * intervalMinutes
   );
 }
 
-function alignMinuteUp(totalMinutes, intervalMinutes) {
+function alignMinuteUp(totalMinutes: number, intervalMinutes: number): number {
   return Math.min(
     24 * 60,
     Math.ceil(totalMinutes / intervalMinutes) * intervalMinutes
   );
 }
 
-export function mergeScheduleWindows(baseWindow, extraWindow) {
+export function mergeScheduleWindows(
+  baseWindow?: ScheduleWindow | null,
+  extraWindow?: ScheduleWindow | null
+): ScheduleWindow | null | undefined {
   if (!baseWindow) return extraWindow;
   if (!extraWindow) return baseWindow;
 
@@ -24,7 +35,10 @@ export function mergeScheduleWindows(baseWindow, extraWindow) {
   };
 }
 
-export function getAppointmentsScheduleWindow(appointments, intervalMinutes) {
+export function getAppointmentsScheduleWindow(
+  appointments: AppointmentLike[],
+  intervalMinutes: number
+): ScheduleWindow | null {
   if (!appointments.length) return null;
 
   const appointmentBounds = appointments.map((appointment) => {

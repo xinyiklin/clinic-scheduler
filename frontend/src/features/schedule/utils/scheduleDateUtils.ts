@@ -3,7 +3,13 @@ import {
   parseDateOnlyInTimeZone,
 } from "../../../shared/utils/dateTime";
 
-export function addDaysToDateString(dateString, offset, timeZone) {
+export type ScheduleDateMode = "resource" | "days";
+
+export function addDaysToDateString(
+  dateString: string,
+  offset: number,
+  timeZone?: string | null
+): string {
   const date = parseDateOnlyInTimeZone(dateString, timeZone);
   if (!date) return dateString;
   date.setUTCDate(date.getUTCDate() + offset);
@@ -11,11 +17,11 @@ export function addDaysToDateString(dateString, offset, timeZone) {
 }
 
 export function buildVisibleDates(
-  startDate,
-  count,
-  timeZone,
-  mode = "resource"
-) {
+  startDate: string,
+  count: number,
+  timeZone?: string | null,
+  mode: ScheduleDateMode = "resource"
+): string[] {
   if (!startDate || !timeZone || count < 1) return [];
   if (mode === "resource") {
     return Array.from({ length: count }, () => startDate);
@@ -25,7 +31,10 @@ export function buildVisibleDates(
   );
 }
 
-export function getDateRangeBounds(dates) {
+export function getDateRangeBounds(dates: string[]): {
+  minDate: string;
+  maxDate: string;
+} {
   if (!dates.length) {
     return { minDate: "", maxDate: "" };
   }
@@ -39,17 +48,23 @@ export function getDateRangeBounds(dates) {
   };
 }
 
-export function formatPickerDateToApi(date, timeZone) {
+export function formatPickerDateToApi(
+  date: unknown,
+  timeZone?: string | null
+): string {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
   return formatDateOnlyInTimeZone(date, timeZone, "yyyy-MM-dd");
 }
 
-export function getTimeZoneAbbreviation(dateString, timeZone) {
+export function getTimeZoneAbbreviation(
+  dateString: string,
+  timeZone?: string | null
+): string {
   try {
     const date = parseDateOnlyInTimeZone(dateString, timeZone);
     if (!date) return "Time";
     const formatter = new Intl.DateTimeFormat(undefined, {
-      timeZone,
+      timeZone: timeZone || "America/New_York",
       timeZoneName: "short",
     });
     return (

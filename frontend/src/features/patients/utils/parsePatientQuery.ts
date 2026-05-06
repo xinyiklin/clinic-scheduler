@@ -1,12 +1,20 @@
 import { parse, isValid, format } from "date-fns";
 
-function normalizeQuery(query) {
+export type ParsedPatientQuery = {
+  name: string;
+  date_of_birth: string;
+  chart_number: string;
+  phone: string;
+  needsAi: boolean;
+};
+
+function normalizeQuery(query: unknown): string {
   return String(query || "")
     .trim()
     .replace(/\s+/g, " ");
 }
 
-function stripKnownTokens(query) {
+function stripKnownTokens(query: string): string {
   return query
     .replace(/\b(?:mrn|chart)\s*[:#]?\s*\d+\b/gi, "")
     .replace(/\b(?:dob|birth(?:day)?|born)\s*[:#]?\s*/gi, "")
@@ -27,7 +35,7 @@ function stripKnownTokens(query) {
     .replace(/\s+/g, " ");
 }
 
-export function parsePatientQuery(query) {
+export function parsePatientQuery(query: unknown): ParsedPatientQuery {
   if (!query)
     return {
       name: "",
@@ -48,7 +56,7 @@ export function parsePatientQuery(query) {
 
   if (dateMatch) {
     const raw = dateMatch[1];
-    let parsedDate = null;
+    let parsedDate: Date | null = null;
 
     if (raw.includes("-")) {
       parsedDate =
@@ -75,7 +83,7 @@ export function parsePatientQuery(query) {
       }
     }
 
-    if (isValid(parsedDate)) {
+    if (parsedDate && isValid(parsedDate)) {
       date_of_birth = format(parsedDate, "yyyy-MM-dd");
     }
   }

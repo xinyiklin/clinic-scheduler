@@ -43,17 +43,23 @@ export const SECURITY_PERMISSION_GROUPS = [
       { key: "admin.facility.manage", label: "Manage facility settings" },
     ],
   },
-];
+] as const;
 
 export const SECURITY_PERMISSION_KEYS = SECURITY_PERMISSION_GROUPS.flatMap(
   (group) => group.permissions.map((permission) => permission.key)
 );
 
-export function normalizeSecurityPermissions(value = {}) {
+export type SecurityPermissionKey = (typeof SECURITY_PERMISSION_KEYS)[number];
+
+export type SecurityPermissions = Record<SecurityPermissionKey, boolean>;
+
+export function normalizeSecurityPermissions(
+  value: Partial<Record<SecurityPermissionKey, boolean>> = {}
+): SecurityPermissions {
   return Object.fromEntries(
     SECURITY_PERMISSION_KEYS.map((permission) => [
       permission,
       Boolean(value?.[permission]),
     ])
-  );
+  ) as SecurityPermissions;
 }

@@ -1,30 +1,64 @@
 export const PHONE_DIGIT_LIMIT = 10;
 export const PHONE_INPUT_PLACEHOLDER = "10-digit phone";
 export const SSN_DIGIT_LIMIT = 9;
-export const PHONE_LABEL_ORDER = ["cell", "home", "work"];
+export const PHONE_LABEL_ORDER = ["cell", "home", "work"] as const;
 export const PHONE_LABEL_TITLES = {
   cell: "Cell",
   home: "Home",
   work: "Work",
 };
 
-export function getDigits(value) {
+type PhoneLabel = (typeof PHONE_LABEL_ORDER)[number] | string;
+
+type PhoneEntryInput = {
+  label?: PhoneLabel | null;
+  number?: string | number | null;
+  phone_number?: string | number | null;
+  is_primary?: boolean | null;
+};
+
+export type NormalizedPhoneEntry = {
+  label: string;
+  labelTitle: string;
+  number: string;
+  formattedNumber: string;
+  is_primary: boolean;
+};
+
+type PatientPhoneValues = {
+  phones?: PhoneEntryInput[] | null;
+  primary_phone_label?: string | null;
+  primary_phone_number?: string | number | null;
+  phone_cell?: string | number | null;
+  phone_home?: string | number | null;
+  phone_work?: string | number | null;
+};
+
+type FormatInput = (value: string) => string;
+
+function isNormalizedPhoneEntry(
+  phone: NormalizedPhoneEntry | null
+): phone is NormalizedPhoneEntry {
+  return phone !== null;
+}
+
+export function getDigits(value: unknown): string {
   return String(value || "").replace(/\D/g, "");
 }
 
-export function getCappedDigits(value, maxDigits) {
+export function getCappedDigits(value: unknown, maxDigits: number): string {
   return getDigits(value).slice(0, maxDigits);
 }
 
-export function getPhoneInputDigits(value) {
+export function getPhoneInputDigits(value: unknown): string {
   return getCappedDigits(value, PHONE_DIGIT_LIMIT);
 }
 
-export function getSsnInputDigits(value) {
+export function getSsnInputDigits(value: unknown): string {
   return getCappedDigits(value, SSN_DIGIT_LIMIT);
 }
 
-export function formatPhoneInput(value) {
+export function formatPhoneInput(value: unknown): string {
   const digits = getPhoneInputDigits(value);
   if (digits.length <= 2) return digits;
   if (digits.length === 3) return `(${digits})`;
@@ -32,7 +66,7 @@ export function formatPhoneInput(value) {
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
 
-export function formatPhoneDisplay(value) {
+export function formatPhoneDisplay(value: unknown): string {
   const raw = String(value || "").trim();
   if (!raw) return "";
 
@@ -44,20 +78,26 @@ export function formatPhoneDisplay(value) {
   return `(${normalized.slice(0, 3)})${normalized.slice(3, 6)}-${normalized.slice(6)}`;
 }
 
-export function getPhoneLabelTitle(label) {
+export function getPhoneLabelTitle(label: unknown): string {
   const normalized = String(label || "")
     .trim()
     .toLowerCase();
-  return PHONE_LABEL_TITLES[normalized] || "Phone";
+  return (
+    PHONE_LABEL_TITLES[normalized as keyof typeof PHONE_LABEL_TITLES] || "Phone"
+  );
 }
 
-function getPhoneSortRank(phone) {
+function getPhoneSortRank(phone: NormalizedPhoneEntry): number {
   const primaryRank = phone.is_primary ? 0 : 1;
-  const labelRank = PHONE_LABEL_ORDER.indexOf(phone.label);
+  const labelRank = PHONE_LABEL_ORDER.findIndex(
+    (label) => label === phone.label
+  );
   return primaryRank * 10 + (labelRank === -1 ? 9 : labelRank);
 }
 
-function normalizePhoneEntry(entry) {
+function normalizePhoneEntry(
+  entry: PhoneEntryInput | null | undefined
+): NormalizedPhoneEntry | null {
   const number = String(entry?.number || entry?.phone_number || "").trim();
   if (!number) return null;
 
@@ -73,26 +113,30 @@ function normalizePhoneEntry(entry) {
   };
 }
 
-export function getPatientPhoneEntries(patientOrValues) {
+export function getPatientPhoneEntries(
+  patientOrValues?: PatientPhoneValues | null
+): NormalizedPhoneEntry[] {
   const values = patientOrValues || {};
   const phones = Array.isArray(values.phones)
-    ? values.phones.map(normalizePhoneEntry).filter(Boolean)
+    ? values.phones.map(normalizePhoneEntry).filter(isNormalizedPhoneEntry)
     : PHONE_LABEL_ORDER.map((label) =>
         normalizePhoneEntry({
           label,
           number: values[`phone_${label}`],
           is_primary: label === "cell",
         })
-      ).filter(Boolean);
+      ).filter(isNormalizedPhoneEntry);
 
   if (!phones.length && values.primary_phone_number) {
-    phones.push(
-      normalizePhoneEntry({
-        label: values.primary_phone_label || "primary",
-        number: values.primary_phone_number,
-        is_primary: true,
-      })
-    );
+    const primaryPhone = normalizePhoneEntry({
+      label: values.primary_phone_label || "primary",
+      number: values.primary_phone_number,
+      is_primary: true,
+    });
+
+    if (primaryPhone) {
+      phones.push(primaryPhone);
+    }
   }
 
   const seen = new Set();
@@ -106,17 +150,21 @@ export function getPatientPhoneEntries(patientOrValues) {
     .sort((a, b) => getPhoneSortRank(a) - getPhoneSortRank(b));
 }
 
-export function formatPhoneEntryDisplay(phone) {
+export function formatPhoneEntryDisplay(
+  phone?: NormalizedPhoneEntry | null
+): string {
   if (!phone) return "";
   return `${phone.labelTitle} ${phone.formattedNumber}`;
 }
 
-export function getPrimaryPatientPhoneDisplay(patientOrValues) {
+export function getPrimaryPatientPhoneDisplay(
+  patientOrValues?: PatientPhoneValues | null
+): string {
   const [primaryPhone] = getPatientPhoneEntries(patientOrValues);
   return formatPhoneEntryDisplay(primaryPhone);
 }
 
-export function formatSsnInput(value) {
+export function formatSsnInput(value: unknown): string {
   const digits = getSsnInputDigits(value);
   if (digits.length <= 2) return digits;
   if (digits.length === 3) return `${digits}-`;
@@ -125,7 +173,11 @@ export function formatSsnInput(value) {
   return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
 }
 
-export function getFormattedBackspaceValue(value, cursorPosition, formatInput) {
+export function getFormattedBackspaceValue(
+  value: unknown,
+  cursorPosition: number | null | undefined,
+  formatInput: FormatInput
+): string | null {
   const text = String(value || "");
   if (!cursorPosition || /\d/.test(text[cursorPosition - 1] || "")) return null;
 
@@ -138,7 +190,11 @@ export function getFormattedBackspaceValue(value, cursorPosition, formatInput) {
   );
 }
 
-export function getFormattedDeleteValue(value, cursorPosition, formatInput) {
+export function getFormattedDeleteValue(
+  value: unknown,
+  cursorPosition: number | null | undefined,
+  formatInput: FormatInput
+): string | null {
   const text = String(value || "");
   if (cursorPosition === null || cursorPosition === undefined) return null;
   if (cursorPosition >= text.length) return null;
@@ -155,7 +211,11 @@ export function getFormattedDeleteValue(value, cursorPosition, formatInput) {
   );
 }
 
-export function handleFormattedInputDeletion(event, formatInput, setValue) {
+export function handleFormattedInputDeletion(
+  event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  formatInput: FormatInput,
+  setValue: (value: string) => void
+): boolean {
   if (event.key !== "Backspace" && event.key !== "Delete") return false;
 
   const input = event.currentTarget;
@@ -177,7 +237,7 @@ export function handleFormattedInputDeletion(event, formatInput, setValue) {
   return true;
 }
 
-export function validatePhoneNumber(value) {
+export function validatePhoneNumber(value: unknown): string | null {
   const raw = String(value || "").trim();
   if (!raw) return null;
 
@@ -186,7 +246,7 @@ export function validatePhoneNumber(value) {
   return "Phone number must be 10 digits.";
 }
 
-export function validateSsn(value) {
+export function validateSsn(value: unknown): string | null {
   const digits = getDigits(value);
   if (!digits) return null;
   return digits.length === 9 ? null : "SSN must be exactly 9 digits.";

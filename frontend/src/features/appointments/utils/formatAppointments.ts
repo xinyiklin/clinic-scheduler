@@ -4,11 +4,25 @@ import {
 } from "../../../shared/utils/dateTime";
 import { getPatientChartName } from "../../patients/utils/patientDisplay";
 
+import type { AppointmentLike } from "../../../shared/types/domain";
+
+export type FormattedAppointment = AppointmentLike & {
+  patient_name: string;
+  duration_minutes: number | string;
+  date: string;
+  time: string;
+  end_date: string | null;
+  end_time_str: string | null;
+  onEdit: () => void;
+};
+
 export default function formatAppointments(
-  appointments,
-  onEditAppointment,
-  timeZone
-) {
+  appointments: AppointmentLike[] = [],
+  onEditAppointment: (
+    appointment: Omit<FormattedAppointment, "onEdit">
+  ) => void,
+  _timeZone?: string | null
+): FormattedAppointment[] {
   return appointments.map((appointment) => {
     const patientName = getPatientChartName(
       appointment,
@@ -46,13 +60,13 @@ export default function formatAppointments(
       appointment_time: appointment.appointment_time,
       duration_minutes: appointment.duration_minutes || 0,
       end_time: appointment.end_time,
-      date: extractStoredDate(appointment.appointment_time, timeZone),
-      time: extractStoredTime(appointment.appointment_time, timeZone),
+      date: extractStoredDate(appointment.appointment_time),
+      time: extractStoredTime(appointment.appointment_time),
       end_date: appointment.end_time
-        ? extractStoredDate(appointment.end_time, timeZone)
+        ? extractStoredDate(appointment.end_time)
         : null,
       end_time_str: appointment.end_time
-        ? extractStoredTime(appointment.end_time, timeZone)
+        ? extractStoredTime(appointment.end_time)
         : null,
     };
 

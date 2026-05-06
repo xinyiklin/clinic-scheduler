@@ -1,19 +1,30 @@
 import { SCHEDULE_START_MINUTE } from "./scheduleConstants";
 
-export function toMinutes(time24) {
+import type { AppointmentLike } from "../../../shared/types/domain";
+
+type PositionedAppointment = AppointmentLike & {
+  startSlot: number;
+  span: number;
+  endSlot: number;
+  laneIndex: number;
+  groupId: number;
+  laneCount: number;
+};
+
+export function toMinutes(time24?: string | null): number {
   if (!time24) return 0;
   const [hours, minutes] = time24.split(":").map(Number);
   return hours * 60 + minutes;
 }
 
-export function toTime24(totalMinutes) {
+export function toTime24(totalMinutes: number): string {
   const normalizedMinutes = ((totalMinutes % 1440) + 1440) % 1440;
   const hours = Math.floor(normalizedMinutes / 60);
   const minutes = normalizedMinutes % 60;
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
-export function formatScheduleSlotLabel(time24) {
+export function formatScheduleSlotLabel(time24?: string | null): string {
   const [hourText, minuteText] = (time24 || "00:00").split(":");
   if (minuteText !== "00") return "";
   const hour = Number(hourText);
@@ -21,10 +32,13 @@ export function formatScheduleSlotLabel(time24) {
   return `${displayHour}:${minuteText}`;
 }
 
-export function getAppointmentDurationMinutes(appointment, intervalMinutes) {
-  if (appointment.duration_minutes) return appointment.duration_minutes;
+export function getAppointmentDurationMinutes(
+  appointment: AppointmentLike,
+  intervalMinutes: number
+): number {
+  if (appointment.duration_minutes) return Number(appointment.duration_minutes);
 
-  if (appointment.end_time_str) {
+  if (appointment.end_time_str && appointment.time) {
     const duration =
       toMinutes(appointment.end_time_str) - toMinutes(appointment.time);
     if (duration > 0) return duration;
@@ -33,20 +47,23 @@ export function getAppointmentDurationMinutes(appointment, intervalMinutes) {
   return intervalMinutes;
 }
 
-export function getAppointmentSpan(appointment, intervalMinutes) {
+export function getAppointmentSpan(
+  appointment: AppointmentLike,
+  intervalMinutes: number
+): number {
   const startMinutes = toMinutes(appointment.time);
   const endMinutes = appointment.end_time_str
     ? toMinutes(appointment.end_time_str)
     : startMinutes +
       Math.max(
-        appointment.duration_minutes || intervalMinutes,
+        Number(appointment.duration_minutes) || intervalMinutes,
         intervalMinutes
       );
   const duration = Math.max(endMinutes - startMinutes, intervalMinutes);
   return Math.max(1, Math.ceil(duration / intervalMinutes));
 }
 
-export function getSlotRowHeight(intervalMinutes) {
+export function getSlotRowHeight(intervalMinutes: number): number {
   if (intervalMinutes <= 5) return 32;
   if (intervalMinutes <= 10) return 36;
   if (intervalMinutes <= 15) return 46;
@@ -55,19 +72,21 @@ export function getSlotRowHeight(intervalMinutes) {
   return 62;
 }
 
-export function getRenderedSpan(span, visibleDayCount) {
+export function getRenderedSpan(span: number, visibleDayCount: number): number {
   if (visibleDayCount <= 1) return span;
   return Math.min(span, 3);
 }
 
 export function buildPositionedAppointments(
-  appointments,
-  intervalMinutes,
+  appointments: AppointmentLike[],
+  intervalMinutes: number,
   startMinute = SCHEDULE_START_MINUTE
-) {
+): PositionedAppointment[] {
   const sortedAppointments = [...appointments]
     .map((appointment) => {
-      const [hours, minutes] = appointment.time.split(":").map(Number);
+      const [hours, minutes] = (appointment.time || "00:00")
+        .split(":")
+        .map(Number);
       const startSlot = Math.floor(
         (hours * 60 + minutes - startMinute) / intervalMinutes
       );
@@ -82,9 +101,13 @@ export function buildPositionedAppointments(
     .filter((appointment) => appointment.endSlot > 0)
     .sort((a, b) => a.startSlot - b.startSlot);
 
-  const laneEndSlots = [];
-  const groupSizes = new Map();
-  let activeAppointments = [];
+  const laneEndSlots: number[] = [];
+  const groupSizes = new Map<number, number>();
+  let activeAppointments: Array<{
+    endSlot: number;
+    laneIndex: number;
+    groupId: number;
+  }> = [];
   let currentGroupId = -1;
 
   const positioned = sortedAppointments.map((appointment) => {

@@ -7,7 +7,12 @@ import {
   SCHEDULE_START_MINUTE,
 } from "./scheduleConstants";
 
-const DEFAULT_OPERATING_DAYS = [1, 2, 3, 4, 5];
+import type {
+  FacilityLike,
+  ScheduleWindow,
+} from "../../../shared/types/domain";
+
+const DEFAULT_OPERATING_DAYS = [1, 2, 3, 4, 5] as const;
 const DAY_LABELS = {
   1: "Mon",
   2: "Tue",
@@ -18,7 +23,10 @@ const DAY_LABELS = {
   7: "Sun",
 };
 
-export function parseTimeToMinutes(value, fallbackMinutes) {
+export function parseTimeToMinutes(
+  value: unknown,
+  fallbackMinutes: number
+): number {
   if (typeof value !== "string") return fallbackMinutes;
 
   const [rawHour, rawMinute] = value.split(":");
@@ -39,7 +47,9 @@ export function parseTimeToMinutes(value, fallbackMinutes) {
   return hour * 60 + minute;
 }
 
-export function getFacilityOperatingWindow(facility) {
+export function getFacilityOperatingWindow(
+  facility?: FacilityLike | null
+): ScheduleWindow {
   const startMinute = parseTimeToMinutes(
     facility?.operating_start_time,
     SCHEDULE_START_MINUTE
@@ -59,7 +69,9 @@ export function getFacilityOperatingWindow(facility) {
   return { startMinute, endMinute };
 }
 
-export function getFacilityOperatingDays(facility) {
+export function getFacilityOperatingDays(
+  facility?: FacilityLike | null
+): number[] {
   const rawDays = Array.isArray(facility?.operating_days)
     ? facility.operating_days
     : DEFAULT_OPERATING_DAYS;
@@ -69,10 +81,14 @@ export function getFacilityOperatingDays(facility) {
       (day, index, days) => day >= 1 && day <= 7 && days.indexOf(day) === index
     );
 
-  return normalizedDays.length ? normalizedDays : DEFAULT_OPERATING_DAYS;
+  return normalizedDays.length ? normalizedDays : [...DEFAULT_OPERATING_DAYS];
 }
 
-export function isFacilityOperatingDate(dateString, timeZone, facility) {
+export function isFacilityOperatingDate(
+  dateString: string,
+  timeZone: string | null | undefined,
+  facility?: FacilityLike | null
+): boolean {
   const date = parseDateOnlyInTimeZone(dateString, timeZone);
   if (!date) return true;
 
@@ -80,22 +96,22 @@ export function isFacilityOperatingDate(dateString, timeZone, facility) {
   return getFacilityOperatingDays(facility).includes(isoDay);
 }
 
-export function formatOperatingWindow(facility) {
+export function formatOperatingWindow(facility?: FacilityLike | null): string {
   const { startMinute, endMinute } = getFacilityOperatingWindow(facility);
   return `${formatMinutes(startMinute)}-${formatMinutes(endMinute)}`;
 }
 
-export function formatOperatingDays(facility) {
+export function formatOperatingDays(facility?: FacilityLike | null): string {
   const days = getFacilityOperatingDays(facility);
   if (days.join(",") === DEFAULT_OPERATING_DAYS.join(",")) return "Mon-Fri";
   if (days.length === 7) return "Daily";
   return days
-    .map((day) => DAY_LABELS[day])
+    .map((day) => DAY_LABELS[day as keyof typeof DAY_LABELS])
     .filter(Boolean)
     .join(", ");
 }
 
-function formatMinutes(totalMinutes) {
+function formatMinutes(totalMinutes: number): string {
   const hour = Math.floor(totalMinutes / 60);
   const minute = totalMinutes % 60;
   const displayHour = hour % 12 === 0 ? 12 : hour % 12;

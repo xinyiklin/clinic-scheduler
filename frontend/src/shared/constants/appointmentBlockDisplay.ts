@@ -11,6 +11,24 @@ export const DEFAULT_APPOINTMENT_BLOCK_DISPLAY = {
   showChartNumber: false,
   showReason: false,
   showNotes: false,
+} satisfies AppointmentBlockDisplay;
+
+export type AppointmentBlockColorMode =
+  (typeof APPOINTMENT_BLOCK_COLOR_MODE_OPTIONS)[number]["value"];
+
+export type AppointmentBlockDisplay = {
+  colorMode: AppointmentBlockColorMode;
+  showStatusChip: boolean;
+  showVisitType: boolean;
+  showRoom: boolean;
+  showResource: boolean;
+  showProvider: boolean;
+  showAppointmentStatus: boolean;
+  showTimeRange: boolean;
+  showDob: boolean;
+  showChartNumber: boolean;
+  showReason: boolean;
+  showNotes: boolean;
 };
 
 export const APPOINTMENT_BLOCK_DISPLAY_OPTIONS = [
@@ -71,17 +89,21 @@ export const APPOINTMENT_BLOCK_COLOR_MODE_OPTIONS = [
     label: "Status block",
     chipLabel: "Visit chip",
   },
-];
+] as const;
 
-export function sanitizeAppointmentBlockColorMode(value) {
+export function sanitizeAppointmentBlockColorMode(
+  value: unknown
+): AppointmentBlockColorMode {
   return APPOINTMENT_BLOCK_COLOR_MODE_OPTIONS.some(
     (option) => option.value === value
   )
-    ? value
+    ? (value as AppointmentBlockColorMode)
     : DEFAULT_APPOINTMENT_BLOCK_DISPLAY.colorMode;
 }
 
-export function sanitizeAppointmentBlockDisplay(value) {
+export function sanitizeAppointmentBlockDisplay(
+  value: unknown
+): AppointmentBlockDisplay {
   const nextValue =
     value && typeof value === "object" && !Array.isArray(value) ? value : {};
 
@@ -91,9 +113,13 @@ export function sanitizeAppointmentBlockDisplay(value) {
         .filter(([, defaultValue]) => typeof defaultValue === "boolean")
         .map(([key, defaultValue]) => [
           key,
-          typeof nextValue[key] === "boolean" ? nextValue[key] : defaultValue,
+          typeof (nextValue as Record<string, unknown>)[key] === "boolean"
+            ? (nextValue as Record<string, boolean>)[key]
+            : defaultValue,
         ])
     ),
-    colorMode: sanitizeAppointmentBlockColorMode(nextValue.colorMode),
-  };
+    colorMode: sanitizeAppointmentBlockColorMode(
+      (nextValue as Record<string, unknown>).colorMode
+    ),
+  } as AppointmentBlockDisplay;
 }

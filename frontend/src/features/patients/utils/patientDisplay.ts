@@ -1,6 +1,8 @@
 import { formatDOB } from "../../../shared/utils/dateTime";
 
-function getMiddleInitial(value) {
+import type { PatientLike } from "../../../shared/types/domain";
+
+function getMiddleInitial(value: unknown): string {
   const trimmed = String(value || "").trim();
   if (!trimmed) return "";
 
@@ -8,7 +10,10 @@ function getMiddleInitial(value) {
   return `${initial}.`;
 }
 
-export function getPatientChartName(patient, fallback = "Unknown patient") {
+export function getPatientChartName(
+  patient?: PatientLike | null,
+  fallback = "Unknown patient"
+): string {
   if (!patient) return fallback;
 
   const firstName =
@@ -35,7 +40,10 @@ export function getPatientChartName(patient, fallback = "Unknown patient") {
   );
 }
 
-export function getPatientFullName(patient, fallback = "Unknown patient") {
+export function getPatientFullName(
+  patient?: PatientLike | null,
+  fallback = "Unknown patient"
+): string {
   if (!patient) return fallback;
 
   const firstName = patient.first_name || patient.patient_first_name || "";
@@ -50,11 +58,14 @@ export function getPatientFullName(patient, fallback = "Unknown patient") {
   );
 }
 
-export function getPatientName(patient, fallback = "Unknown patient") {
+export function getPatientName(
+  patient?: PatientLike | null,
+  fallback = "Unknown patient"
+): string {
   return getPatientChartName(patient, fallback);
 }
 
-export function getPatientInitials(patient) {
+export function getPatientInitials(patient?: PatientLike | null): string {
   return (
     [patient?.first_name, patient?.last_name]
       .map((part) => (part || "").charAt(0))
@@ -64,7 +75,7 @@ export function getPatientInitials(patient) {
   );
 }
 
-export function getPatientDobMrn(patient) {
+export function getPatientDobMrn(patient?: PatientLike | null): string {
   return [
     patient?.date_of_birth ? `DOB ${formatDOB(patient.date_of_birth)}` : "",
     patient?.chart_number ? `MRN ${patient.chart_number}` : "",
