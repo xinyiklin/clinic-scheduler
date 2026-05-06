@@ -6,16 +6,31 @@ import { DEMO_MODE } from "../../../shared/config/appConfig";
 import { CareFlowIcon } from "../../../shared/components/icons";
 import { Button, Input, Notice } from "../../../shared/components/ui";
 
-export default function LoginForm({ onSubmit, onDemoLogin, error, loading }) {
+import type { ChangeEvent, FormEvent } from "react";
+import type { LoginCredentials } from "../api/users";
+
+type LoginFormProps = {
+  onSubmit?: (credentials: LoginCredentials) => void;
+  onDemoLogin?: () => Promise<void> | void;
+  error?: string;
+  loading?: boolean;
+};
+
+export default function LoginForm({
+  onSubmit,
+  onDemoLogin,
+  error,
+  loading,
+}: LoginFormProps) {
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [demoLoading, setDemoLoading] = useState(false);
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     onSubmit?.(formData);
   };

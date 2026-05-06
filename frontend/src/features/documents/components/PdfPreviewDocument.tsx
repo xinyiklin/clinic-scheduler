@@ -2,6 +2,18 @@ import { Document, Page } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
+import type { MutableRefObject, ReactNode } from "react";
+
+type PdfPreviewDocumentProps = {
+  file: string;
+  numPages: number;
+  pageHeight: number | null;
+  pageWidth: number | null;
+  pageRefs: MutableRefObject<Array<HTMLDivElement | null>> | null;
+  onLoadSuccess: (data: { numPages: number }) => void;
+  onPageRenderSuccess?: () => void;
+};
+
 export default function PdfPreviewDocument({
   file,
   numPages,
@@ -10,10 +22,12 @@ export default function PdfPreviewDocument({
   pageRefs,
   onLoadSuccess,
   onPageRenderSuccess,
-}) {
+}: PdfPreviewDocumentProps) {
   const pageSizeProps = pageHeight
     ? { height: pageHeight }
-    : { width: pageWidth };
+    : pageWidth
+      ? { width: pageWidth }
+      : {};
 
   return (
     <Document
@@ -43,7 +57,7 @@ export default function PdfPreviewDocument({
   );
 }
 
-function PdfMessage({ children }) {
+function PdfMessage({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-72 min-w-72 items-center justify-center rounded-xl border border-dashed border-cf-border bg-cf-surface text-sm font-semibold text-cf-text-muted">
       {children}

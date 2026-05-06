@@ -8,14 +8,42 @@ import usePatientDocuments, {
   getPatientDocumentsQueryKey,
 } from "../hooks/usePatientDocuments";
 
-function getInitialDocuments(patient) {
+import type { EntityId } from "../../../shared/api/types";
+import type {
+  DocumentCategory,
+  DocumentCategoryNavItem,
+  PatientDocument,
+  PatientWithDocuments,
+} from "../types";
+import type { DocumentsWorkspaceProps } from "./DocumentsWorkspace";
+
+type PatientDocumentsWorkspaceProps = {
+  patient?: PatientWithDocuments | null;
+  facilityId?: EntityId | null;
+  canManageCategories?: boolean;
+  onDocumentUploaded?: (document: PatientDocument | null) => void;
+} & Omit<
+  DocumentsWorkspaceProps,
+  | "documents"
+  | "categories"
+  | "selectedPatient"
+  | "selectedFacilityId"
+  | "canManageCategories"
+  | "onManageCategories"
+  | "isLoadingDocuments"
+  | "documentLoadError"
+  | "onRetryDocuments"
+  | "onDocumentUploaded"
+>;
+
+function getInitialDocuments(patient?: PatientWithDocuments | null) {
   if (Array.isArray(patient?.patient_documents))
     return patient.patient_documents;
   if (Array.isArray(patient?.documents)) return patient.documents;
   return [];
 }
 
-function getCategoryNavLabel(category) {
+function getCategoryNavLabel(category: DocumentCategory) {
   const compactLabels = {
     lab: "Labs",
     imaging: "Imaging",
@@ -24,7 +52,9 @@ function getCategoryNavLabel(category) {
     consent: "Consent",
   };
 
-  return compactLabels[category.code] || category.name;
+  return (
+    compactLabels[category.code as keyof typeof compactLabels] || category.name
+  );
 }
 
 export default function PatientDocumentsWorkspace({
@@ -33,7 +63,7 @@ export default function PatientDocumentsWorkspace({
   canManageCategories = false,
   onDocumentUploaded,
   ...workspaceProps
-}) {
+}: PatientDocumentsWorkspaceProps) {
   const queryClient = useQueryClient();
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const patientId = patient?.id || null;
@@ -45,7 +75,7 @@ export default function PatientDocumentsWorkspace({
   });
   const categoriesQuery = useDocumentCategories({ facilityId });
 
-  const categories = [
+  const categories: DocumentCategoryNavItem[] = [
     { id: "all", label: "All Documents" },
     ...categoriesQuery.categories.map((category) => ({
       ...category,
@@ -55,8 +85,9 @@ export default function PatientDocumentsWorkspace({
     })),
   ];
 
-  const handleDocumentUploaded = (document) => {
-    queryClient.setQueryData(queryKey, (current = []) => {
+  const handleDocumentUploaded = (document: PatientDocument | null) => {
+    if (!document) return;
+    queryClient.setQueryData<PatientDocument[]>(queryKey, (current = []) => {
       const currentDocuments = Array.isArray(current) ? current : [];
       if (currentDocuments.some((item) => item.id === document.id)) {
         return currentDocuments;

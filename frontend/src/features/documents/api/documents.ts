@@ -2,6 +2,7 @@ import { apiBlobRequest, apiRequest } from "../../../shared/api/client";
 
 import type { ApiPayload, EntityId } from "../../../shared/api/types";
 import type { ApiRecord } from "../../../shared/types/domain";
+import type { DocumentCategory, PatientDocument } from "../types";
 
 type FacilityScopedParams = {
   facilityId?: EntityId | null;
@@ -77,7 +78,7 @@ export function uploadPatientDocument({
   formData.append("name", file.name);
   formData.append("category", category);
 
-  return apiRequest<ApiRecord>("/patients/documents/", {
+  return apiRequest<PatientDocument>("/patients/documents/", {
     method: "POST",
     params: { facility_id: facilityId },
     body: formData,
@@ -88,7 +89,7 @@ export function fetchPatientDocuments({
   facilityId,
   patientId,
 }: PatientScopedParams = {}) {
-  return apiRequest<ApiRecord[]>("/patients/documents/", {
+  return apiRequest<PatientDocument[]>("/patients/documents/", {
     params: {
       facility_id: facilityId,
       patient_id: patientId,
@@ -99,7 +100,7 @@ export function fetchPatientDocuments({
 export function fetchDocumentCategories({
   facilityId,
 }: FacilityScopedParams = {}) {
-  return apiRequest<ApiRecord[]>("/patients/document-categories/", {
+  return apiRequest<DocumentCategory[]>("/patients/document-categories/", {
     params: { facility_id: facilityId },
   });
 }
@@ -110,7 +111,7 @@ export function createDocumentCategory({
 }: FacilityScopedParams & {
   values: ApiPayload;
 }) {
-  return apiRequest<ApiRecord>("/patients/document-categories/", {
+  return apiRequest<DocumentCategory>("/patients/document-categories/", {
     method: "POST",
     params: { facility_id: facilityId },
     body: JSON.stringify(values),
@@ -125,11 +126,14 @@ export function updateDocumentCategory({
   categoryId: EntityId;
   values: ApiPayload;
 }) {
-  return apiRequest<ApiRecord>(`/patients/document-categories/${categoryId}/`, {
-    method: "PATCH",
-    params: { facility_id: facilityId },
-    body: JSON.stringify(values),
-  });
+  return apiRequest<DocumentCategory>(
+    `/patients/document-categories/${categoryId}/`,
+    {
+      method: "PATCH",
+      params: { facility_id: facilityId },
+      body: JSON.stringify(values),
+    }
+  );
 }
 
 export function deleteDocumentCategory({

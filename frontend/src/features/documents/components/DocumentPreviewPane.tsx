@@ -5,7 +5,29 @@ import { Button } from "../../../shared/components/ui";
 import { getErrorMessage } from "../../../shared/utils/errors";
 import { getPatientDocumentPreview } from "../api/documents";
 
-const PdfPreviewViewer = lazy(() => import("./PdfPreviewViewer"));
+import type { ComponentType, LazyExoticComponent, ReactNode } from "react";
+import type { EntityId } from "../../../shared/api/types";
+import type { NormalizedPatientDocument, PatientDocument } from "../types";
+
+type PreviewDocument = PatientDocument | NormalizedPatientDocument;
+
+type PreviewResult = {
+  contentType: string;
+  filename: string;
+  isExternal?: boolean;
+  url: string;
+};
+
+type PdfPreviewViewerProps = {
+  file: string;
+  filename: string;
+  showDocumentHeader?: boolean;
+  flush?: boolean;
+};
+
+const PdfPreviewViewer = lazy(
+  () => import("./PdfPreviewViewer")
+) as LazyExoticComponent<ComponentType<PdfPreviewViewerProps>>;
 
 function getExtension(filename = "") {
   const match = filename.toLowerCase().match(/\.([a-z0-9]+)$/);
@@ -42,10 +64,16 @@ export default function DocumentPreviewPane({
   onDownload,
   showDocumentHeader = true,
   flush = false,
+}: {
+  document?: PreviewDocument | null;
+  facilityId?: EntityId | null;
+  onDownload?: (document: PreviewDocument) => void;
+  showDocumentHeader?: boolean;
+  flush?: boolean;
 }) {
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
-  const [preview, setPreview] = useState(null);
+  const [preview, setPreview] = useState<PreviewResult | null>(null);
   const objectUrlRef = useRef("");
 
   useEffect(() => {
@@ -70,13 +98,15 @@ export default function DocumentPreviewPane({
       return undefined;
     }
 
+    const activeDocument = document;
+
     async function loadPreview() {
       setStatus("loading");
 
       try {
         const result = await getPatientDocumentPreview({
           facilityId,
-          document,
+          document: activeDocument,
         });
         if (isCancelled) return;
 
@@ -86,9 +116,9 @@ export default function DocumentPreviewPane({
         pendingObjectUrl = "";
         setPreview({
           contentType: result.contentType || "",
-          filename: result.filename || document.name,
+          filename: result.filename || activeDocument.name || "",
           isExternal: result.isExternal,
-          url: objectUrlRef.current || result.url,
+          url: objectUrlRef.current,
         });
         setStatus("ready");
       } catch (loadError) {
@@ -141,7 +171,7 @@ export default function DocumentPreviewPane({
   if (status === "loading" && !preview?.url) {
     return (
       <NoDocumentPreview
-        documentName={document.name}
+        documentName={document.name || ""}
         showDocumentHeader={showDocumentHeader}
         flush={flush}
       />
@@ -177,7 +207,7 @@ export default function DocumentPreviewPane({
       <Suspense
         fallback={
           <NoDocumentPreview
-            documentName={preview.filename || document.name}
+            documentName={preview.filename || document.name || ""}
             showDocumentHeader={showDocumentHeader}
             flush={flush}
           />
@@ -197,7 +227,7 @@ export default function DocumentPreviewPane({
     return (
       <PreviewShell flush={flush}>
         <img
-          alt={`Preview of ${document.name}`}
+          alt={`Preview of ${document.name || "document"}`}
           className="h-full w-full rounded-xl object-contain"
           src={preview.url}
         />
@@ -226,7 +256,13 @@ export default function DocumentPreviewPane({
   );
 }
 
-function PreviewShell({ children, flush }) {
+function PreviewShell({
+  children,
+  flush,
+}: {
+  children: ReactNode;
+  flush?: boolean;
+}) {
   return (
     <div
       className={[
@@ -248,7 +284,15 @@ function PreviewShell({ children, flush }) {
   );
 }
 
-function NoDocumentPreview({ documentName = "", showDocumentHeader, flush }) {
+function NoDocumentPreview({
+  documentName = "",
+  showDocumentHeader,
+  flush,
+}: {
+  documentName?: string;
+  showDocumentHeader?: boolean;
+  flush?: boolean;
+}) {
   return (
     <div
       className={[
@@ -290,7 +334,17 @@ function NoDocumentPreview({ documentName = "", showDocumentHeader, flush }) {
   );
 }
 
-function EmptyPreview({ icon, title, message, children }) {
+function EmptyPreview({
+  icon,
+  title,
+  message,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  message: string;
+  children?: ReactNode;
+}) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-5 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-cf-border bg-cf-surface-soft text-cf-text-subtle">

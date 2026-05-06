@@ -3,12 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchPatientDocuments } from "../api/documents";
 
 import type { EntityId } from "../../../shared/api/types";
-import type { ApiRecord } from "../../../shared/types/domain";
+import type { PatientDocument } from "../types";
 
 type UsePatientDocumentsOptions = {
   facilityId?: EntityId | null;
   patientId?: EntityId | null;
-  initialDocuments?: ApiRecord[];
+  initialDocuments?: PatientDocument[];
 };
 
 export function getPatientDocumentsQueryKey(

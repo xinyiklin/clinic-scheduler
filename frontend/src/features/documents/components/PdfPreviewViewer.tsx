@@ -12,6 +12,22 @@ import { pdfjs } from "react-pdf";
 import { Button } from "../../../shared/components/ui";
 import PdfPreviewDocument from "./PdfPreviewDocument";
 
+type FitMode = "height" | "width";
+type ZoomDirection = "in" | "out";
+
+type PdfLayer = {
+  file: string;
+  filename?: string;
+  key: number;
+};
+
+type PdfPreviewViewerProps = {
+  file: string;
+  filename?: string;
+  showDocumentHeader?: boolean;
+  flush?: boolean;
+};
+
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url
@@ -27,22 +43,22 @@ export default function PdfPreviewViewer({
   filename,
   showDocumentHeader = true,
   flush = false,
-}) {
+}: PdfPreviewViewerProps) {
   const layerKeyRef = useRef(0);
   const [activeLayer, setActiveLayer] = useState(() =>
     createPdfLayer({ file, filename, key: layerKeyRef.current })
   );
-  const [pendingLayer, setPendingLayer] = useState(null);
+  const [pendingLayer, setPendingLayer] = useState<PdfLayer | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [pendingNumPages, setPendingNumPages] = useState(0);
   const [pendingRenderedPages, setPendingRenderedPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
-  const [fitMode, setFitMode] = useState("height");
+  const [fitMode, setFitMode] = useState<FitMode>("height");
   const [zoom, setZoom] = useState(1);
   const [viewerHeight, setViewerHeight] = useState(0);
   const [viewerWidth, setViewerWidth] = useState(0);
-  const scrollRef = useRef(null);
-  const pageRefs = useRef([]);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
     const node = scrollRef.current;
@@ -108,7 +124,7 @@ export default function PdfPreviewViewer({
       : null;
   const pageWidth = pageHeight ? null : Math.round(basePageWidth * zoom);
 
-  const goToPage = (nextPage) => {
+  const goToPage = (nextPage: number) => {
     const safePage = Math.min(Math.max(nextPage, 1), numPages || 1);
     setPageNumber(safePage);
     pageRefs.current[safePage - 1]?.scrollIntoView({
@@ -117,7 +133,7 @@ export default function PdfPreviewViewer({
     });
   };
 
-  const changeZoom = (direction) => {
+  const changeZoom = (direction: ZoomDirection) => {
     setZoom((current) => {
       const next =
         direction === "in" ? current + ZOOM_STEP : current - ZOOM_STEP;
@@ -125,7 +141,7 @@ export default function PdfPreviewViewer({
     });
   };
 
-  const applyFitMode = (nextMode) => {
+  const applyFitMode = (nextMode: FitMode) => {
     setFitMode(nextMode);
     setZoom(1);
   };
@@ -241,53 +257,59 @@ export default function PdfPreviewViewer({
         ref={scrollRef}
         className="relative min-h-0 flex-1 overflow-auto bg-[color-mix(in_srgb,var(--color-cf-surface-muted)_76%,var(--color-cf-surface))] px-3 py-4"
       >
-        {[activeLayer, pendingLayer].filter(Boolean).map((layer) => {
-          const isActive = layer.key === activeLayer.key;
-          const layerNumPages = isActive ? numPages : pendingNumPages;
+        {[activeLayer, pendingLayer]
+          .filter((layer): layer is PdfLayer => Boolean(layer))
+          .map((layer) => {
+            const isActive = layer.key === activeLayer.key;
+            const layerNumPages = isActive ? numPages : pendingNumPages;
 
-          return (
-            <div
-              key={layer.key}
-              className={
-                isActive
-                  ? ""
-                  : "pointer-events-none absolute top-4 left-3 opacity-0"
-              }
-              aria-hidden={!isActive}
-            >
-              <PdfPreviewDocument
-                file={layer.file}
-                numPages={layerNumPages}
-                pageHeight={pageHeight}
-                pageRefs={isActive ? pageRefs : null}
-                pageWidth={pageWidth}
-                onLoadSuccess={({ numPages: loadedPages }) => {
-                  if (isActive) {
-                    setNumPages(loadedPages);
-                    setPageNumber(1);
-                    return;
-                  }
-
-                  setPendingNumPages(loadedPages);
-                  setPendingRenderedPages(0);
-                }}
-                onPageRenderSuccess={
+            return (
+              <div
+                key={layer.key}
+                className={
                   isActive
-                    ? undefined
-                    : () => {
-                        setPendingRenderedPages((current) => current + 1);
-                      }
+                    ? ""
+                    : "pointer-events-none absolute top-4 left-3 opacity-0"
                 }
-              />
-            </div>
-          );
-        })}
+                aria-hidden={!isActive}
+              >
+                <PdfPreviewDocument
+                  file={layer.file}
+                  numPages={layerNumPages}
+                  pageHeight={pageHeight}
+                  pageRefs={isActive ? pageRefs : null}
+                  pageWidth={pageWidth}
+                  onLoadSuccess={({
+                    numPages: loadedPages,
+                  }: {
+                    numPages: number;
+                  }) => {
+                    if (isActive) {
+                      setNumPages(loadedPages);
+                      setPageNumber(1);
+                      return;
+                    }
+
+                    setPendingNumPages(loadedPages);
+                    setPendingRenderedPages(0);
+                  }}
+                  onPageRenderSuccess={
+                    isActive
+                      ? undefined
+                      : () => {
+                          setPendingRenderedPages((current) => current + 1);
+                        }
+                  }
+                />
+              </div>
+            );
+          })}
       </div>
     </div>
   );
 }
 
-function createPdfLayer({ file, filename, key }) {
+function createPdfLayer({ file, filename, key }: PdfLayer): PdfLayer {
   return {
     file,
     filename,

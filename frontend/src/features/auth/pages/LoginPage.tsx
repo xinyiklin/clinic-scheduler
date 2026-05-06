@@ -7,6 +7,8 @@ import LoadingScreen from "../../../shared/components/LoadingScreen";
 import useMinimumLoading from "../../../shared/hooks/useMinimumLoading";
 import { getErrorMessage } from "../../../shared/utils/errors";
 
+import type { LoginCredentials } from "../api/users";
+
 export default function LoginPage() {
   const { user, loading, login, demoLogin } = useAuth();
   const navigate = useNavigate();
@@ -15,7 +17,7 @@ export default function LoginPage() {
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const showSessionLoading = useMinimumLoading(loading);
 
-  const handleLoginSubmit = async (credentials) => {
+  const handleLoginSubmit = async (credentials: LoginCredentials) => {
     setAuthSubmitting(true);
     setAuthError("");
 

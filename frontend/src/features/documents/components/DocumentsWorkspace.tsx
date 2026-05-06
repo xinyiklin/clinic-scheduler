@@ -23,6 +23,15 @@ import {
 } from "../api/documents";
 import DocumentPreviewPane from "./DocumentPreviewPane";
 
+import type { ChangeEvent, ReactNode } from "react";
+import type { EntityId } from "../../../shared/api/types";
+import type { PatientLike } from "../../../shared/types/domain";
+import type {
+  DocumentCategoryNavItem,
+  NormalizedPatientDocument,
+  PatientDocument,
+} from "../types";
+
 const ACCEPTED_DOCUMENT_EXTENSIONS = ".pdf,.png,.jpg,.jpeg,.tif,.tiff";
 const ACCEPTED_DOCUMENT_TYPES = new Set([
   "application/pdf",
@@ -38,9 +47,28 @@ const DEFAULT_CATEGORIES = [
   { id: "referrals", label: "Referrals & Consults", navLabel: "Referrals" },
   { id: "admin", label: "Administrative", navLabel: "Admin" },
   { id: "consent", label: "Consent Forms", navLabel: "Consent" },
-];
+] satisfies DocumentCategoryNavItem[];
 
-function normalizeDocument(document, index) {
+export type DocumentsWorkspaceProps = {
+  documents?: PatientDocument[];
+  categories?: DocumentCategoryNavItem[];
+  compact?: boolean;
+  title?: string;
+  selectedPatient?: PatientLike | null;
+  selectedFacilityId?: EntityId | null;
+  toolbarAccessory?: ReactNode;
+  canManageCategories?: boolean;
+  onManageCategories?: (() => void) | null;
+  onDocumentUploaded?: ((document: PatientDocument | null) => void) | null;
+  isLoadingDocuments?: boolean;
+  documentLoadError?: string;
+  onRetryDocuments?: (() => void) | null;
+};
+
+function normalizeDocument(
+  document: PatientDocument,
+  index: number
+): NormalizedPatientDocument {
   return {
     id: String(document.id || document.uuid || `document-${index}`),
     name:
@@ -67,7 +95,7 @@ function normalizeDocument(document, index) {
   };
 }
 
-function formatDocumentDate(value) {
+function formatDocumentDate(value: string | number | null | undefined) {
   if (!value) return "";
   const dateOnlyMatch =
     typeof value === "string" && value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -87,7 +115,7 @@ function formatDocumentDate(value) {
   });
 }
 
-function isAcceptedDocumentFile(file) {
+function isAcceptedDocumentFile(file: File) {
   const name = (file.name || "").toLowerCase();
   const hasAcceptedExtension = ACCEPTED_DOCUMENT_EXTENSIONS.split(",").some(
     (extension) => name.endsWith(extension)
@@ -109,13 +137,13 @@ export default function DocumentsWorkspace({
   isLoadingDocuments = false,
   documentLoadError = "",
   onRetryDocuments = null,
-}) {
+}: DocumentsWorkspaceProps) {
   const [activeCategory, setActiveCategory] = useState("all");
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [focusedDocumentId, setFocusedDocumentId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const normalizedDocuments = useMemo(
     () => documents.map(normalizeDocument),
@@ -147,7 +175,7 @@ export default function DocumentsWorkspace({
     ? "Select one or more documents first."
     : "";
 
-  const toggleDocument = (documentId) => {
+  const toggleDocument = (documentId: string) => {
     setSelectedIds((current) =>
       current.includes(documentId)
         ? current.filter((id) => id !== documentId)
@@ -155,7 +183,7 @@ export default function DocumentsWorkspace({
     );
   };
 
-  const handlePreviewDocument = (document) => {
+  const handlePreviewDocument = (document: NormalizedPatientDocument) => {
     setFocusedDocumentId(document.id);
     setErrorMessage("");
   };
@@ -165,7 +193,7 @@ export default function DocumentsWorkspace({
     fileInputRef.current?.click();
   };
 
-  const handleFileSelected = async (event) => {
+  const handleFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
     const [file] = Array.from(event.target.files || []);
     event.target.value = "";
     if (!file || !selectedPatient || !selectedFacilityId) return;
@@ -195,7 +223,7 @@ export default function DocumentsWorkspace({
     }
   };
 
-  const handleDownloadDocument = async (document) => {
+  const handleDownloadDocument = async (document: PatientDocument) => {
     if (!selectedFacilityId) return;
 
     try {
@@ -209,7 +237,7 @@ export default function DocumentsWorkspace({
     }
   };
 
-  const handleBatchAction = async (action) => {
+  const handleBatchAction = async (action: "download") => {
     if (!selectedDocuments.length) return;
     if (action === "download") {
       try {

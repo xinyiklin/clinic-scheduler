@@ -6,10 +6,30 @@ import PatientSearchField from "../../patients/components/PatientSearchField";
 import { useBootReadiness } from "../../../app/BootReadinessContext";
 import WorkspaceShell from "../../../shared/components/WorkspaceShell";
 
+import type { ComponentType } from "react";
+import type { EntityId } from "../../../shared/api/types";
+import type { PatientLike } from "../../../shared/types/domain";
+
+type PatientSearchFieldProps = {
+  facilityId?: EntityId | null;
+  selectedPatient?: PatientLike | null;
+  onSelectPatient: (patient: PatientLike | null) => void;
+  recentPatients?: PatientLike[];
+  showDetailedSearch?: boolean;
+  showNoResultActions?: boolean;
+  compactSelected?: boolean;
+  showSelectedAvatar?: boolean;
+};
+
+const PatientSearchFieldComponent =
+  PatientSearchField as ComponentType<PatientSearchFieldProps>;
+
 export default function DocumentsPage() {
   const { selectedFacilityId, selectedMembership } = useFacility();
   const { setRouteReady } = useBootReadiness();
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState<PatientLike | null>(
+    null
+  );
   const canManageCategories = Boolean(
     selectedMembership?.effective_security_permissions?.[
       "documents.categories.manage"
@@ -29,7 +49,7 @@ export default function DocumentsPage() {
           facilityId={selectedFacilityId}
           canManageCategories={canManageCategories}
           toolbarAccessory={
-            <PatientSearchField
+            <PatientSearchFieldComponent
               facilityId={selectedFacilityId}
               selectedPatient={selectedPatient}
               onSelectPatient={setSelectedPatient}

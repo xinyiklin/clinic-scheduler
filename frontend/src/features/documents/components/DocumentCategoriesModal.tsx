@@ -11,23 +11,57 @@ import {
 } from "../../../shared/components/ui";
 import {
   AdminField,
-  AdminFormModal,
+  AdminFormModal as UntypedAdminFormModal,
   AdminFormSection,
 } from "../../admin/components/shared/AdminFormModal";
+import type { ComponentType, FormEvent, ReactNode } from "react";
+import type { EntityId } from "../../../shared/api/types";
+import type { DocumentCategory, SaveDocumentCategoryPayload } from "../types";
 
 const EMPTY_FORM = {
   name: "",
   sort_order: 10,
 };
 
-function getNextSortOrder(categories) {
+type DocumentCategoryForm = typeof EMPTY_FORM;
+
+type DocumentCategoriesModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  categories?: DocumentCategory[];
+  loading?: boolean;
+  saving?: boolean;
+  error?: string;
+  onSave?: (payload: SaveDocumentCategoryPayload) => Promise<unknown> | unknown;
+  onDelete?: (categoryId: EntityId) => Promise<unknown> | unknown;
+};
+
+type AdminFormModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  scope: string;
+  title: string;
+  description?: string;
+  maxWidth?: string;
+  formId: string;
+  saving?: boolean;
+  deleteLabel?: string;
+  onDelete?: () => void;
+  children: ReactNode;
+};
+
+const AdminFormModal =
+  UntypedAdminFormModal as ComponentType<AdminFormModalProps>;
+
+function getNextSortOrder(categories: DocumentCategory[]) {
   const orders = categories.map((category) => Number(category.sort_order) || 0);
   return (Math.max(0, ...orders) || 0) + 10;
 }
 
-function getCategoryStatus(category) {
+function getCategoryStatus(category: DocumentCategory) {
   if (category.is_system) return <Badge variant="neutral">System</Badge>;
-  if (category.document_count > 0) return <Badge variant="muted">In use</Badge>;
+  if (Number(category.document_count) > 0)
+    return <Badge variant="muted">In use</Badge>;
   return <Badge variant="outline">Custom</Badge>;
 }
 
@@ -40,14 +74,16 @@ export default function DocumentCategoriesModal({
   error = "",
   onSave,
   onDelete,
-}) {
-  const [editingCategory, setEditingCategory] = useState(null);
+}: DocumentCategoriesModalProps) {
+  const [editingCategory, setEditingCategory] =
+    useState<DocumentCategory | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState<DocumentCategoryForm>(EMPTY_FORM);
   const [localError, setLocalError] = useState("");
-  const [deleteCandidate, setDeleteCandidate] = useState(null);
-  const [dragCategoryId, setDragCategoryId] = useState(null);
-  const [dropTargetId, setDropTargetId] = useState(null);
+  const [deleteCandidate, setDeleteCandidate] =
+    useState<DocumentCategory | null>(null);
+  const [dragCategoryId, setDragCategoryId] = useState<EntityId | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<EntityId | null>(null);
 
   const orderedCategories = useMemo(
     () =>
@@ -83,7 +119,7 @@ export default function DocumentCategoriesModal({
     setIsEditorOpen(true);
   };
 
-  const beginEdit = (category) => {
+  const beginEdit = (category: DocumentCategory) => {
     setEditingCategory(category);
     setForm({
       name: category.name || "",
@@ -93,7 +129,7 @@ export default function DocumentCategoriesModal({
     setIsEditorOpen(true);
   };
 
-  const handleSave = async (event) => {
+  const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const name = form.name.trim();
     if (!name) {
@@ -111,7 +147,7 @@ export default function DocumentCategoriesModal({
     resetEditor();
   };
 
-  const persistOrder = async (nextCategories) => {
+  const persistOrder = async (nextCategories: DocumentCategory[]) => {
     const updates = nextCategories
       .map((category, index) => ({
         category,
@@ -132,7 +168,7 @@ export default function DocumentCategoriesModal({
     );
   };
 
-  const handleDrop = async (targetCategory) => {
+  const handleDrop = async (targetCategory: DocumentCategory) => {
     const draggedCategory = orderedCategories.find(
       (category) => category.id === dragCategoryId
     );
@@ -172,9 +208,9 @@ export default function DocumentCategoriesModal({
   const deleteBlockReason =
     editingCategory?.delete_block_reason ||
     (editingCategory?.is_system ? "System category" : "") ||
-    (editingCategory?.document_count > 0 ? "Documents filed" : "");
+    (Number(editingCategory?.document_count) > 0 ? "Documents filed" : "");
   const canDeleteEditingCategory =
-    Boolean(editingCategory) &&
+    editingCategory !== null &&
     editingCategory.can_delete !== false &&
     !deleteBlockReason;
 
