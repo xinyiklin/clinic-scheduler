@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
 
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
+
 const maxWidthClasses = {
   sm: "max-w-sm",
   md: "max-w-md",
@@ -10,6 +12,32 @@ const maxWidthClasses = {
   "3xl": "max-w-3xl",
   "4xl": "max-w-4xl",
 };
+
+type ModalMaxWidth = keyof typeof maxWidthClasses;
+
+type ModalShellProps = {
+  isOpen: boolean;
+  onClose?: () => void;
+  title: ReactNode;
+  eyebrow?: ReactNode;
+  description?: ReactNode;
+  maxWidth?: ModalMaxWidth;
+  zIndex?: number;
+  children?: ReactNode;
+  footer?: ReactNode;
+  panelClassName?: string;
+  bodyClassName?: string;
+  footerClassName?: string;
+};
+
+const focusableSelector = [
+  "button:not([disabled])",
+  "a[href]",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
 
 export default function ModalShell({
   isOpen,
@@ -24,11 +52,11 @@ export default function ModalShell({
   panelClassName = "",
   bodyClassName = "",
   footerClassName = "",
-}) {
+}: ModalShellProps) {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
-  const panelRef = useRef(null);
-  const previousFocusRef = useRef(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const previousFocusRef = useRef<Element | null>(null);
   const titleId = useId();
   const descriptionId = useId();
 
@@ -51,8 +79,8 @@ export default function ModalShell({
   }, [isOpen, shouldRender]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
+    if (!isOpen) return undefined;
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.key === "Escape") onClose?.();
     };
     document.addEventListener("keydown", handleKeyDown);
@@ -64,16 +92,7 @@ export default function ModalShell({
 
     previousFocusRef.current = document.activeElement;
     const panel = panelRef.current;
-    const firstFocusable = panel?.querySelector(
-      [
-        "button:not([disabled])",
-        "a[href]",
-        "input:not([disabled])",
-        "select:not([disabled])",
-        "textarea:not([disabled])",
-        "[tabindex]:not([tabindex='-1'])",
-      ].join(",")
-    );
+    const firstFocusable = panel?.querySelector(focusableSelector);
 
     window.setTimeout(() => {
       if (firstFocusable instanceof HTMLElement) {
@@ -90,22 +109,14 @@ export default function ModalShell({
     };
   }, [isOpen]);
 
-  const handlePanelKeyDown = (event) => {
+  const handlePanelKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Tab") return;
 
     const focusable = Array.from(
-      panelRef.current?.querySelectorAll(
-        [
-          "button:not([disabled])",
-          "a[href]",
-          "input:not([disabled])",
-          "select:not([disabled])",
-          "textarea:not([disabled])",
-          "[tabindex]:not([tabindex='-1'])",
-        ].join(",")
-      ) || []
+      panelRef.current?.querySelectorAll(focusableSelector) || []
     ).filter(
-      (node) => node instanceof HTMLElement && node.offsetParent !== null
+      (node): node is HTMLElement =>
+        node instanceof HTMLElement && node.offsetParent !== null
     );
 
     if (!focusable.length) {
@@ -138,7 +149,7 @@ export default function ModalShell({
         isClosing ? "is-closing" : "is-opening",
       ].join(" ")}
       style={{ zIndex }}
-      onMouseDown={(e) => {
+      onMouseDown={(e: MouseEvent<HTMLDivElement>) => {
         if (e.target === e.currentTarget) onClose?.();
       }}
     >

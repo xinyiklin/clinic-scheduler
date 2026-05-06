@@ -1,3 +1,5 @@
+import type { ButtonHTMLAttributes, ReactNode } from "react";
+
 const variants = {
   default:
     "border border-cf-border bg-cf-surface text-cf-text-muted " +
@@ -21,6 +23,17 @@ const shapes = {
   pill: "rounded-full",
 };
 
+type ButtonVariant = keyof typeof variants;
+type ButtonSize = keyof typeof sizes;
+type ButtonShape = keyof typeof shapes;
+
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  shape?: ButtonShape;
+  children?: ReactNode;
+};
+
 export default function Button({
   variant = "default",
   size = "md",
@@ -29,7 +42,7 @@ export default function Button({
   disabled,
   children,
   ...props
-}) {
+}: ButtonProps) {
   return (
     <button
       disabled={disabled}

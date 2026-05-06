@@ -1,12 +1,38 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
-function clamp(value, min, max) {
+import type { CSSProperties, PointerEvent } from "react";
+
+type ModalPosition = {
+  x: number;
+  y: number;
+};
+
+type DraggableModalOptions = {
+  isOpen?: boolean;
+  resetOnOpen?: boolean;
+};
+
+type DragHandleProps = {
+  onPointerDown: (event: PointerEvent<HTMLElement>) => void;
+};
+
+type DraggableModalState = {
+  modalRef: React.RefObject<HTMLDivElement | null>;
+  modalStyle: CSSProperties | undefined;
+  dragHandleProps: DragHandleProps;
+  recenter: () => void;
+};
+
+function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-export default function useDraggableModal({ isOpen, resetOnOpen = true } = {}) {
-  const modalRef = useRef(null);
-  const [position, setPosition] = useState(null);
+export default function useDraggableModal({
+  isOpen,
+  resetOnOpen = true,
+}: DraggableModalOptions = {}): DraggableModalState {
+  const modalRef = useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = useState<ModalPosition | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStateRef = useRef({ offsetX: 0, offsetY: 0 });
 
@@ -20,7 +46,7 @@ export default function useDraggableModal({ isOpen, resetOnOpen = true } = {}) {
     setPosition({ x, y });
   }, []);
 
-  const handlePointerDown = useCallback((e) => {
+  const handlePointerDown = useCallback((e: PointerEvent<HTMLElement>) => {
     if (e.button !== 0) return;
     const modalEl = modalRef.current;
     if (!modalEl) return;
@@ -35,9 +61,9 @@ export default function useDraggableModal({ isOpen, resetOnOpen = true } = {}) {
   }, []);
 
   useEffect(() => {
-    if (!isDragging) return;
+    if (!isDragging) return undefined;
 
-    const handlePointerMove = (e) => {
+    const handlePointerMove = (e: globalThis.PointerEvent) => {
       const modalEl = modalRef.current;
       if (!modalEl) return;
 
@@ -72,9 +98,8 @@ export default function useDraggableModal({ isOpen, resetOnOpen = true } = {}) {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [isDragging]); // Only re-runs when dragging starts/stops
+  }, [isDragging]);
 
-  // 4. Handle auto-centering and window resizing
   useEffect(() => {
     if (isOpen && resetOnOpen) {
       requestAnimationFrame(centerModal);

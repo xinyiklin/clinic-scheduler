@@ -1,3 +1,16 @@
+import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+
+type PanelProps = {
+  icon?: LucideIcon | null;
+  title?: ReactNode;
+  description?: ReactNode;
+  tone?: "default" | "subtle";
+  className?: string;
+  bodyClassName?: string;
+  children?: ReactNode;
+};
+
 export default function Panel({
   icon: Icon = null,
   title,
@@ -6,7 +19,7 @@ export default function Panel({
   className = "",
   bodyClassName = "",
   children,
-}) {
+}: PanelProps) {
   return (
     <section
       data-tone={tone === "subtle" ? "subtle" : "default"}

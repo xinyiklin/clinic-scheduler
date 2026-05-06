@@ -3,15 +3,13 @@ import { useEffect, useRef, useState } from "react";
 const DEFAULT_MINIMUM_LOADING_MS = 650;
 
 export default function useMinimumLoading(
-  isLoading,
+  isLoading: boolean,
   minimumMs = DEFAULT_MINIMUM_LOADING_MS
-) {
+): boolean {
   const [shouldShowLoading, setShouldShowLoading] = useState(isLoading);
   const startedAtRef = useRef(isLoading ? performance.now() : 0);
 
   useEffect(() => {
-    let timeoutId;
-
     if (isLoading) {
       startedAtRef.current = performance.now();
       setShouldShowLoading(true);
@@ -30,7 +28,7 @@ export default function useMinimumLoading(
       return undefined;
     }
 
-    timeoutId = window.setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
       setShouldShowLoading(false);
     }, remainingMs);
 

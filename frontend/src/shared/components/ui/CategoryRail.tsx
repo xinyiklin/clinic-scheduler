@@ -1,14 +1,33 @@
-function joinClasses(...classes) {
+import type { ButtonHTMLAttributes, ReactNode } from "react";
+
+function joinClasses(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-export function CategoryRail({ label, children, className = "" }) {
+type CategoryRailProps = {
+  label: string;
+  children?: ReactNode;
+  className?: string;
+};
+
+export function CategoryRail({
+  label,
+  children,
+  className = "",
+}: CategoryRailProps) {
   return (
     <nav aria-label={label} className={joinClasses(className || "grid gap-1")}>
       {children}
     </nav>
   );
 }
+
+type CategoryRailItemProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  active?: boolean;
+  children?: ReactNode;
+  dotClassName?: string;
+  size?: "sm" | "md";
+};
 
 export function CategoryRailItem({
   active = false,
@@ -17,7 +36,8 @@ export function CategoryRailItem({
   dotClassName = "",
   onClick,
   size = "sm",
-}) {
+  ...props
+}: CategoryRailItemProps) {
   const sizeClasses =
     size === "md"
       ? "rounded-xl px-3 py-2.5 text-sm"
@@ -37,6 +57,7 @@ export function CategoryRailItem({
           : "text-cf-text-muted hover:bg-cf-surface/70 hover:text-cf-text",
         className
       )}
+      {...props}
     >
       <span
         className={joinClasses(

@@ -1,4 +1,6 @@
-export const MUI_DATE_FIELD_SX = {
+import type { SxProps, Theme } from "@mui/material/styles";
+
+export const MUI_DATE_FIELD_SX: SxProps<Theme> = {
   width: "100%",
   "& .MuiOutlinedInput-root": {
     borderRadius: "0.75rem",

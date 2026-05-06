@@ -1,3 +1,5 @@
+import type { HTMLAttributes, ReactNode } from "react";
+
 const variants = {
   neutral: "bg-cf-surface-soft text-cf-text-muted",
   outline: "border border-cf-border bg-cf-surface text-cf-text-muted",
@@ -12,12 +14,22 @@ const sizes = {
   md: "px-3 py-1.5 text-sm",
 };
 
+type BadgeVariant = keyof typeof variants;
+type BadgeSize = keyof typeof sizes;
+
+type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
+  variant?: BadgeVariant;
+  size?: BadgeSize;
+  children?: ReactNode;
+};
+
 export default function Badge({
   variant = "neutral",
   size = "sm",
   className = "",
   children,
-}) {
+  ...props
+}: BadgeProps) {
   return (
     <span
       className={[
@@ -26,6 +38,7 @@ export default function Badge({
         sizes[size] ?? sizes.sm,
         className,
       ].join(" ")}
+      {...props}
     >
       {children}
     </span>

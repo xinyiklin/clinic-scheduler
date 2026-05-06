@@ -1,5 +1,8 @@
 import { AlertCircle, CheckCircle2, Info, TriangleAlert } from "lucide-react";
 
+import type { HTMLAttributes, ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+
 const TONE_STYLES = {
   danger: {
     icon: AlertCircle,
@@ -19,6 +22,20 @@ const TONE_STYLES = {
     icon: Info,
     className: "border-cf-border bg-cf-surface-muted text-cf-text-muted",
   },
+} satisfies Record<
+  string,
+  {
+    icon: LucideIcon;
+    className: string;
+  }
+>;
+
+type NoticeTone = keyof typeof TONE_STYLES;
+
+type NoticeProps = HTMLAttributes<HTMLDivElement> & {
+  tone?: NoticeTone;
+  title?: ReactNode;
+  children?: ReactNode;
 };
 
 export default function Notice({
@@ -26,7 +43,8 @@ export default function Notice({
   title,
   children,
   className = "",
-}) {
+  ...props
+}: NoticeProps) {
   if (!children && !title) return null;
 
   const config = TONE_STYLES[tone] || TONE_STYLES.info;
@@ -42,6 +60,7 @@ export default function Notice({
       ]
         .filter(Boolean)
         .join(" ")}
+      {...props}
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
       <div className="min-w-0">
