@@ -9,7 +9,37 @@ import {
   getPatientName,
 } from "../utils/patientDisplay";
 
-export function PatientAvatar({ patient, size = "md", selected = false }) {
+import type { ReactNode } from "react";
+import type { PatientRecord } from "../types";
+
+type PatientAvatarProps = {
+  patient?: PatientRecord | null;
+  size?: "sm" | "md";
+  selected?: boolean;
+};
+
+type PatientLineProps = {
+  patient?: PatientRecord | null;
+  className?: string;
+};
+
+type PatientDobMrnLineProps = PatientLineProps & {
+  prefix?: boolean;
+};
+
+type PatientSearchResultCardProps = {
+  patient: PatientRecord;
+  isSelected: boolean;
+  onSelect: () => void;
+  onOpen?: () => void;
+  actions?: ReactNode;
+};
+
+export function PatientAvatar({
+  patient,
+  size = "md",
+  selected = false,
+}: PatientAvatarProps) {
   const sizeClass = size === "sm" ? "h-8 w-8 text-xs" : "h-11 w-11 text-sm";
 
   return (
@@ -27,7 +57,7 @@ export function PatientAvatar({ patient, size = "md", selected = false }) {
   );
 }
 
-export function PatientNameLine({ patient, className = "" }) {
+export function PatientNameLine({ patient, className = "" }: PatientLineProps) {
   const name = getPatientName(patient);
 
   return (
@@ -40,7 +70,11 @@ export function PatientNameLine({ patient, className = "" }) {
   );
 }
 
-export function PatientDobMrnLine({ patient, prefix = true, className = "" }) {
+export function PatientDobMrnLine({
+  patient,
+  prefix = true,
+  className = "",
+}: PatientDobMrnLineProps) {
   const value = getPatientDobMrn(patient);
 
   return (
@@ -58,7 +92,7 @@ export function PatientSearchResultCard({
   onSelect,
   onOpen,
   actions,
-}) {
+}: PatientSearchResultCardProps) {
   const primaryPhone = getPrimaryPatientPhoneDisplay(patient);
 
   return (

@@ -1,3 +1,20 @@
+import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
+
+type RegistrationSectionShellProps = {
+  icon?: LucideIcon;
+  title: string;
+  badge?: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  children: ReactNode;
+};
+
+type ReadOnlyRegistrationRowProps = {
+  label: string;
+  value?: ReactNode;
+};
+
 export function RegistrationSectionShell({
   icon: Icon,
   title,
@@ -5,7 +22,7 @@ export function RegistrationSectionShell({
   className = "",
   bodyClassName = "",
   children,
-}) {
+}: RegistrationSectionShellProps) {
   return (
     <article
       className={[
@@ -27,7 +44,10 @@ export function RegistrationSectionShell({
   );
 }
 
-export function ReadOnlyRegistrationRow({ label, value }) {
+export function ReadOnlyRegistrationRow({
+  label,
+  value,
+}: ReadOnlyRegistrationRowProps) {
   return (
     <div className="min-w-0">
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cf-text-subtle">

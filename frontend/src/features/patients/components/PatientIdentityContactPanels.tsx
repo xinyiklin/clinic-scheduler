@@ -8,6 +8,32 @@ import {
   validateSsn,
 } from "../utils/contactValidation";
 
+import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import type {
+  PatientFormValues,
+  PatientRecord,
+  RegisterFormattedField,
+} from "../types";
+
+type PatientIdentityPanelProps = {
+  errors: FieldErrors<PatientFormValues>;
+  handleToggleSsn: () => void;
+  maskedSsn: string;
+  patient?: PatientRecord | null;
+  register: UseFormRegister<PatientFormValues>;
+  registerSsnField: RegisterFormattedField;
+  shouldEditSsn: boolean;
+  ssnHint: string;
+  showFullSsn: boolean;
+};
+
+type PatientContactPanelProps = {
+  errors: FieldErrors<PatientFormValues>;
+  mode: "create" | "edit";
+  register: UseFormRegister<PatientFormValues>;
+  registerPhoneField: RegisterFormattedField;
+};
+
 export function PatientIdentityPanel({
   errors,
   handleToggleSsn,
@@ -18,7 +44,7 @@ export function PatientIdentityPanel({
   shouldEditSsn,
   ssnHint,
   showFullSsn,
-}) {
+}: PatientIdentityPanelProps) {
   return (
     <Panel icon={IdCard} title="Identity" tone="subtle">
       <div className="grid gap-4 md:grid-cols-2">
@@ -128,7 +154,7 @@ export function PatientContactPanel({
   mode,
   register,
   registerPhoneField,
-}) {
+}: PatientContactPanelProps) {
   return (
     <Panel icon={Mail} title="Contact">
       <div className="grid gap-4">

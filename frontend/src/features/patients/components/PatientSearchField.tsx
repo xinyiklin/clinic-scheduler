@@ -16,6 +16,24 @@ import {
 import { Button, Input, Notice } from "../../../shared/components/ui";
 import { getErrorMessage } from "../../../shared/utils/errors";
 
+import type { ChangeEvent, MouseEvent } from "react";
+import type { EntityId } from "../../../shared/api/types";
+import type { PatientRecord } from "../types";
+
+type PatientSearchFieldProps = {
+  facilityId?: EntityId | null;
+  selectedPatient?: PatientRecord | null;
+  onSelectPatient: (patient: PatientRecord | null) => void;
+  onOpenDetailedSearch?: () => void;
+  onOpenCreatePatient?: () => void;
+  recentPatients?: PatientRecord[];
+  showDetailedSearch?: boolean;
+  showNoResultActions?: boolean;
+  compactSelected?: boolean;
+  showSelectedAvatar?: boolean;
+  resultsDropdownClassName?: string;
+};
+
 export default function PatientSearchField({
   facilityId,
   selectedPatient,
@@ -28,23 +46,26 @@ export default function PatientSearchField({
   compactSelected = false,
   showSelectedAvatar = true,
   resultsDropdownClassName = "",
-}) {
+}: PatientSearchFieldProps) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<PatientRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [showRecentPatients, setShowRecentPatients] = useState(false);
   const [error, setError] = useState("");
 
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const cleanQuery = useMemo(
     () => (query || "").trim().replace(/\s+/g, " "),
     [query]
   );
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!containerRef.current?.contains(event.target)) {
+    const handleClickOutside = (event: globalThis.MouseEvent) => {
+      if (
+        event.target instanceof Node &&
+        !containerRef.current?.contains(event.target)
+      ) {
         setShowResults(false);
         setShowRecentPatients(false);
       }
@@ -80,7 +101,7 @@ export default function PatientSearchField({
                 phone: parsed.phone,
               }
             : { facilityId, search: cleanQuery };
-        const data = await searchPatients(searchPayload);
+        const data = (await searchPatients(searchPayload)) ?? [];
         setResults(data);
         setShowResults(true);
       } catch (err) {
@@ -93,7 +114,7 @@ export default function PatientSearchField({
     return () => clearTimeout(timer);
   }, [cleanQuery, facilityId]);
 
-  const handleSelect = (patient) => {
+  const handleSelect = (patient: PatientRecord) => {
     onSelectPatient(patient);
     setQuery("");
     setResults([]);
@@ -146,7 +167,9 @@ export default function PatientSearchField({
               <Input
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                  setQuery(event.target.value)
+                }
                 onFocus={() => {
                   if (results.length > 0) setShowResults(true);
                 }}
@@ -169,11 +192,13 @@ export default function PatientSearchField({
                   {!loading && error && <Notice tone="danger">{error}</Notice>}
                   {!loading && !error && results.length > 0 && (
                     <ul className="space-y-1">
-                      {results.map((patient) => (
-                        <li key={patient.id}>
+                      {results.map((patient, index) => (
+                        <li key={patient.id ?? patient.chart_number ?? index}>
                           <button
                             type="button"
-                            onMouseDown={(event) => {
+                            onMouseDown={(
+                              event: MouseEvent<HTMLButtonElement>
+                            ) => {
                               event.preventDefault();
                             }}
                             onClick={() => handleSelect(patient)}
@@ -291,8 +316,8 @@ export default function PatientSearchField({
                 {recentPatients.length > 0 && showRecentPatients ? (
                   <div className="absolute right-0 top-12 z-30 w-72 rounded-2xl border border-cf-border bg-cf-surface p-2 shadow-[var(--shadow-panel-lg)]">
                     <ul className="max-h-72 space-y-1 overflow-y-auto">
-                      {recentPatients.map((patient) => (
-                        <li key={patient.id}>
+                      {recentPatients.map((patient, index) => (
+                        <li key={patient.id ?? patient.chart_number ?? index}>
                           <button
                             type="button"
                             onClick={() => handleSelect(patient)}

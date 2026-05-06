@@ -3,10 +3,32 @@ import { AlertTriangle } from "lucide-react";
 
 import { Button } from "../../../../shared/components/ui";
 
+import type { EmergencyContactFormValues, PatientRecord } from "../../types";
+import type { PatientInsurancePolicy } from "../../../../shared/types/domain";
+
+type IntakeContext = {
+  insurancePolicies: PatientInsurancePolicy[];
+  emergencyContacts: EmergencyContactFormValues[];
+};
+
+type IntakeSection = {
+  key: string;
+  label: string;
+  tone: "billing" | "safety" | "clinical" | "uscdi" | "care";
+  isMissing: (patient: PatientRecord, context: IntakeContext) => boolean;
+};
+
+type IntakeBannerProps = {
+  patient?: PatientRecord | null;
+  insurancePolicies?: PatientInsurancePolicy[] | null;
+  emergencyContacts?: EmergencyContactFormValues[] | null;
+  onJumpTo?: (sectionKey: string) => void;
+};
+
 // Sections are listed in display priority. USCDI v3 demographics (race,
 // ethnicity, preferred language) accept "Declined" as a valid filled value;
 // the corresponding `*_declined` boolean satisfies the requirement.
-const SECTIONS = [
+const SECTIONS: IntakeSection[] = [
   {
     key: "address",
     label: "Add address",
@@ -71,7 +93,7 @@ export default function IntakeBanner({
   insurancePolicies,
   emergencyContacts,
   onJumpTo,
-}) {
+}: IntakeBannerProps) {
   const missingSections = useMemo(() => {
     if (!patient) return [];
     return SECTIONS.filter((section) =>

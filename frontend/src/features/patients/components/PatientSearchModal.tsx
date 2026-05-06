@@ -17,8 +17,23 @@ import {
 import useDraggableModal from "../../../shared/hooks/useDraggableModal";
 import { getErrorMessage } from "../../../shared/utils/errors";
 
+import type { EntityId } from "../../../shared/api/types";
+import type { PatientRecord } from "../types";
+
 const PAGE_SIZE = 10;
 const SEARCH_DELAY_MS = 500;
+
+type PatientSearchModalProps = {
+  isOpen: boolean;
+  facilityId?: EntityId | null;
+  onClose?: () => void;
+  onSelectPatient?: (patient: PatientRecord) => void;
+  onOpenCreatePatient?: () => void;
+  onOpenPatientProfile?: (patient: PatientRecord) => void;
+  allowSelect?: boolean;
+  injectedPatient?: PatientRecord | null;
+  injectedPatientMode?: "create" | "edit";
+};
 
 export default function PatientSearchModal({
   isOpen,
@@ -30,10 +45,12 @@ export default function PatientSearchModal({
   allowSelect = true,
   injectedPatient,
   injectedPatientMode,
-}) {
+}: PatientSearchModalProps) {
   const [smartQuery, setSmartQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const [results, setResults] = useState<PatientRecord[]>([]);
+  const [selectedPatientId, setSelectedPatientId] = useState<EntityId | null>(
+    null
+  );
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -112,14 +129,14 @@ export default function PatientSearchModal({
       try {
         setLoading(true);
         setError("");
-        const data = await searchPatients({
+        const data = ((await searchPatients({
           facilityId,
           search: canSearchBySmartText ? smartSearchValue : "",
           name: canSearchByName ? queryName : "",
           date_of_birth: canSearchByDob ? queryDob : "",
           chart_number: canSearchByMrn ? queryChartNumber : "",
           phone: canSearchByPhone ? queryPhone : "",
-        });
+        })) ?? []) as PatientRecord[];
 
         if (searchRequestIdRef.current !== requestId) return;
 
@@ -152,7 +169,7 @@ export default function PatientSearchModal({
     } else {
       setResults([injectedPatient]);
     }
-    setSelectedPatientId(injectedPatient.id);
+    setSelectedPatientId(injectedPatient.id ?? null);
     setPage(1);
   }, [injectedPatient, injectedPatientMode]);
 
@@ -161,9 +178,9 @@ export default function PatientSearchModal({
     [results, selectedPatientId]
   );
 
-  const handleUsePatient = (patient) => {
+  const handleUsePatient = (patient: PatientRecord | null) => {
     if (!patient) return;
-    setSelectedPatientId(patient.id);
+    setSelectedPatientId(patient.id ?? null);
     onSelectPatient?.(patient);
     onClose?.();
   };
@@ -225,11 +242,15 @@ export default function PatientSearchModal({
               {!loading && paginatedResults.length > 0
                 ? paginatedResults.map((patient) => (
                     <PatientResultRow
-                      key={patient.id}
+                      key={
+                        patient.id ??
+                        patient.chart_number ??
+                        patient.date_of_birth
+                      }
                       patient={patient}
                       isSelected={patient.id === selectedPatientId}
                       allowSelect={allowSelect}
-                      onSelect={() => setSelectedPatientId(patient.id)}
+                      onSelect={() => setSelectedPatientId(patient.id ?? null)}
                       onUsePatient={handleUsePatient}
                       onOpenPatientProfile={onOpenPatientProfile}
                     />

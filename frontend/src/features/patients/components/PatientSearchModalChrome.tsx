@@ -2,7 +2,43 @@ import { ChevronLeft, ChevronRight, Search, UserPlus, X } from "lucide-react";
 
 import { Button, Input, Notice } from "../../../shared/components/ui";
 
-function SearchMeta({ label, value }) {
+import type { ChangeEvent, HTMLAttributes } from "react";
+
+type SearchMetaProps = {
+  label: string;
+  value: string;
+};
+
+type PatientSearchHeaderProps = {
+  dragHandleProps: HTMLAttributes<HTMLDivElement>;
+  onClose?: () => void;
+  onOpenCreatePatient?: () => void;
+};
+
+type PatientSearchInputPanelProps = {
+  error: string;
+  page: number;
+  searchStatusLabel: string;
+  smartQuery: string;
+  totalPages: number;
+  onSmartQueryChange: (value: string) => void;
+};
+
+type MatchQueueHeaderProps = {
+  canSearch: boolean;
+  loading: boolean;
+  resultLabel: string;
+  selected: boolean;
+};
+
+type ResultsPaginationProps = {
+  page: number;
+  totalPages: number;
+  onNext: () => void;
+  onPrevious: () => void;
+};
+
+function SearchMeta({ label, value }: SearchMetaProps) {
   return (
     <div className="min-w-0">
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cf-text-subtle">
@@ -19,7 +55,7 @@ export function PatientSearchHeader({
   dragHandleProps,
   onClose,
   onOpenCreatePatient,
-}) {
+}: PatientSearchHeaderProps) {
   return (
     <div
       {...dragHandleProps}
@@ -37,7 +73,7 @@ export function PatientSearchHeader({
           type="button"
           variant="primary"
           size="sm"
-          onPointerDown={(e) => e.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
           onClick={onOpenCreatePatient}
           className="!text-cf-page-bg"
         >
@@ -46,7 +82,7 @@ export function PatientSearchHeader({
         </Button>
         <button
           type="button"
-          onPointerDown={(e) => e.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
           onClick={onClose}
           className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-cf-text-subtle transition hover:bg-cf-surface-soft hover:text-cf-text-muted"
           aria-label="Close"
@@ -65,7 +101,7 @@ export function PatientSearchInputPanel({
   smartQuery,
   totalPages,
   onSmartQueryChange,
-}) {
+}: PatientSearchInputPanelProps) {
   return (
     <div className="bg-cf-surface px-5 py-4">
       {error && (
@@ -81,7 +117,9 @@ export function PatientSearchInputPanel({
             <Input
               type="text"
               value={smartQuery}
-              onChange={(event) => onSmartQueryChange(event.target.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                onSmartQueryChange(event.target.value)
+              }
               aria-label="Smart patient search"
               placeholder="Name, MRN, DOB, or phone"
               className="h-11 rounded-xl border-cf-border bg-cf-surface pl-10 pr-4 text-sm font-semibold focus:border-cf-border-strong focus:ring-0"
@@ -104,7 +142,7 @@ export function MatchQueueHeader({
   loading,
   resultLabel,
   selected,
-}) {
+}: MatchQueueHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-cf-border bg-cf-surface-muted/45 px-4 py-3">
       <div>
@@ -126,7 +164,12 @@ export function MatchQueueHeader({
   );
 }
 
-export function ResultsPagination({ page, totalPages, onNext, onPrevious }) {
+export function ResultsPagination({
+  page,
+  totalPages,
+  onNext,
+  onPrevious,
+}: ResultsPaginationProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-cf-border px-4 py-3">
       <div className="text-sm text-cf-text-muted">

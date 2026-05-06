@@ -14,6 +14,37 @@ import { Button } from "../../../shared/components/ui";
 import { formatDOB } from "../../../shared/utils/dateTime";
 import { getPrimaryPatientPhoneDisplay } from "../utils/contactValidation";
 
+import type { KeyboardEvent, MouseEvent } from "react";
+import type { LucideIcon } from "lucide-react";
+import type { PatientRecord } from "../types";
+
+type SelectedFieldProps = {
+  icon: LucideIcon;
+  label: string;
+  value?: string | number | null;
+};
+
+type PatientSearchEmptyStateProps = {
+  canSearch: boolean;
+  onOpenCreatePatient?: () => void;
+};
+
+type PatientResultRowProps = {
+  patient: PatientRecord;
+  isSelected: boolean;
+  allowSelect: boolean;
+  onSelect: () => void;
+  onUsePatient: (patient: PatientRecord) => void;
+  onOpenPatientProfile?: (patient: PatientRecord) => void;
+};
+
+type SelectedPatientPanelProps = {
+  patient?: PatientRecord | null;
+  allowSelect: boolean;
+  onUsePatient: (patient: PatientRecord) => void;
+  onOpenPatientProfile?: (patient: PatientRecord) => void;
+};
+
 export function PatientResultSkeleton() {
   return (
     <div className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-cf-border px-4 py-3 last:border-b-0">
@@ -29,7 +60,7 @@ export function PatientResultSkeleton() {
   );
 }
 
-function patientDetailLine(patient) {
+function patientDetailLine(patient: PatientRecord): string {
   const details = [
     patient?.date_of_birth ? `DOB ${formatDOB(patient.date_of_birth)}` : null,
     patient?.chart_number ? `MRN ${patient.chart_number}` : null,
@@ -40,7 +71,7 @@ function patientDetailLine(patient) {
   return details.join(" · ") || "No demographic details";
 }
 
-function SelectedField({ icon: Icon, label, value }) {
+function SelectedField({ icon: Icon, label, value }: SelectedFieldProps) {
   const displayValue = value || "—";
 
   return (
@@ -52,7 +83,7 @@ function SelectedField({ icon: Icon, label, value }) {
         </div>
         <div
           className="mt-0.5 truncate text-sm font-semibold text-cf-text select-text"
-          title={value || undefined}
+          title={value ? String(value) : undefined}
         >
           {displayValue}
         </div>
@@ -61,7 +92,10 @@ function SelectedField({ icon: Icon, label, value }) {
   );
 }
 
-export function PatientSearchEmptyState({ canSearch, onOpenCreatePatient }) {
+export function PatientSearchEmptyState({
+  canSearch,
+  onOpenCreatePatient,
+}: PatientSearchEmptyStateProps) {
   return (
     <div className="flex min-h-[20rem] items-center justify-center px-5 py-10 text-center">
       <div className="mx-auto max-w-sm">
@@ -102,7 +136,7 @@ export function PatientResultRow({
   onSelect,
   onUsePatient,
   onOpenPatientProfile,
-}) {
+}: PatientResultRowProps) {
   const detailLine = patientDetailLine(patient);
 
   return (
@@ -111,7 +145,7 @@ export function PatientResultRow({
       tabIndex={0}
       onClick={onSelect}
       onDoubleClick={() => onOpenPatientProfile?.(patient)}
-      onKeyDown={(event) => {
+      onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
         onSelect();
@@ -148,7 +182,7 @@ export function PatientResultRow({
         type="button"
         variant="default"
         size="sm"
-        onClick={(event) => {
+        onClick={(event: MouseEvent<HTMLButtonElement>) => {
           event.stopPropagation();
           if (allowSelect) {
             onUsePatient(patient);
@@ -173,7 +207,7 @@ export function SelectedPatientPanel({
   allowSelect,
   onUsePatient,
   onOpenPatientProfile,
-}) {
+}: SelectedPatientPanelProps) {
   if (!patient) {
     return (
       <aside className="border-t border-cf-border bg-cf-surface px-5 py-4 lg:border-t-0 lg:border-l">

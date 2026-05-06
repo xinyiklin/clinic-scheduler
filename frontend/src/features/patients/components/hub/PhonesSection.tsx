@@ -10,17 +10,35 @@ import {
 } from "../../utils/contactValidation";
 import InlineEditField from "./InlineEditField";
 
+import type { PatientPhoneEntryLike } from "../../../../shared/types/domain";
+
 const PHONE_LABELS = [
   { label: "cell", title: "Cell" },
   { label: "home", title: "Home" },
   { label: "work", title: "Work" },
-];
+] as const;
 
-function getPhoneByLabel(phones, label) {
+type PhoneLabel = (typeof PHONE_LABELS)[number]["label"];
+
+type EditablePhone = PatientPhoneEntryLike & {
+  label: PhoneLabel;
+  number?: string | number | null;
+  is_primary?: boolean | null;
+};
+
+type PhonesSectionProps = {
+  phones?: EditablePhone[];
+  onSavePhones: (phones: EditablePhone[]) => Promise<void> | void;
+};
+
+function getPhoneByLabel(
+  phones: EditablePhone[] | undefined,
+  label: PhoneLabel
+): EditablePhone | null {
   return (phones || []).find((phone) => phone.label === label) || null;
 }
 
-function ensurePrimaryAssigned(phones) {
+function ensurePrimaryAssigned(phones: EditablePhone[]): EditablePhone[] {
   if (!phones.length) return phones;
   if (phones.some((phone) => phone.is_primary)) return phones;
   return phones.map((phone, index) => ({
@@ -29,7 +47,11 @@ function ensurePrimaryAssigned(phones) {
   }));
 }
 
-function buildPhonesPatch(currentPhones, label, nextNumber) {
+function buildPhonesPatch(
+  currentPhones: EditablePhone[],
+  label: PhoneLabel,
+  nextNumber: string | number | null | undefined
+): EditablePhone[] {
   const trimmed = getPhoneInputDigits(nextNumber);
   const others = (currentPhones || []).filter((phone) => phone.label !== label);
   const existing = getPhoneByLabel(currentPhones, label);
@@ -47,25 +69,34 @@ function buildPhonesPatch(currentPhones, label, nextNumber) {
   return ensurePrimaryAssigned([...others, updated]);
 }
 
-function buildPrimaryPatch(currentPhones, label) {
+function buildPrimaryPatch(
+  currentPhones: EditablePhone[],
+  label: PhoneLabel
+): EditablePhone[] {
   return (currentPhones || []).map((phone) => ({
     ...phone,
     is_primary: phone.label === label,
   }));
 }
 
-function isFinalPhone(phones, label) {
+function isFinalPhone(phones: EditablePhone[], label: PhoneLabel): boolean {
   const remaining = (phones || []).filter(
-    (phone) => phone.label !== label && (phone.number || "").trim()
+    (phone) => phone.label !== label && String(phone.number || "").trim()
   );
   return remaining.length === 0;
 }
 
-export default function PhonesSection({ phones = [], onSavePhones }) {
+export default function PhonesSection({
+  phones = [],
+  onSavePhones,
+}: PhonesSectionProps) {
   const cellPhone = getPhoneByLabel(phones, "cell");
   const primaryLabel = (phones || []).find((phone) => phone.is_primary)?.label;
 
-  const handleSavePhone = async (label, nextNumber) => {
+  const handleSavePhone = async (
+    label: PhoneLabel,
+    nextNumber: string | number | null | undefined
+  ) => {
     const trimmed = getPhoneInputDigits(nextNumber);
     if (!trimmed && isFinalPhone(phones, label)) {
       throw new Error("At least one phone number is required.");
@@ -74,7 +105,7 @@ export default function PhonesSection({ phones = [], onSavePhones }) {
     await onSavePhones(next);
   };
 
-  const handleMakePrimary = async (label) => {
+  const handleMakePrimary = async (label: PhoneLabel) => {
     const next = buildPrimaryPatch(phones, label);
     await onSavePhones(next);
   };

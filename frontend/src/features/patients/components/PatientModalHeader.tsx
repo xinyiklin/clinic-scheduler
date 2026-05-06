@@ -1,11 +1,20 @@
 import { UserRound, X } from "lucide-react";
 
+import type { HTMLAttributes } from "react";
+
+type PatientModalHeaderProps = {
+  dragHandleProps: HTMLAttributes<HTMLDivElement>;
+  mode: "create" | "edit";
+  onClose?: () => void;
+  patientInitials: string;
+};
+
 export default function PatientModalHeader({
   dragHandleProps,
   mode,
   onClose,
   patientInitials,
-}) {
+}: PatientModalHeaderProps) {
   const title =
     mode === "edit" ? "Patient Registration" : "New Patient Registration";
 

@@ -3,6 +3,46 @@ import { Check, ChevronDown, Loader2, Pencil, X } from "lucide-react";
 
 import { Input } from "../../../../shared/components/ui";
 
+import type { InputHTMLAttributes, KeyboardEvent } from "react";
+
+export type InlineEditValue = string | number | null | undefined;
+
+type InlineEditOption = {
+  value: InlineEditValue;
+  label: string;
+};
+
+type SubmitState = {
+  status: "idle" | "saving" | "error";
+  error: string;
+};
+
+type InlineEditFieldProps = {
+  label?: string;
+  value?: InlineEditValue;
+  type?: "text" | "email" | "password" | "number" | "date" | "select";
+  options?: InlineEditOption[];
+  placeholder?: string;
+  inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
+  maxLength?: number;
+  sanitizeInput?: (value: string) => string;
+  onFormattedKeyDown?: (
+    event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+    updateDraft: (value: string) => void
+  ) => boolean;
+  className?: string;
+  multiline?: boolean;
+  rows?: number;
+  displayValue?: string;
+  displayTitle?: string;
+  formatDisplay?: (value: InlineEditValue) => string;
+  onSave?: (value: InlineEditValue) => Promise<void> | void;
+  validate?: (value: InlineEditValue) => string | null | undefined;
+  disabled?: boolean;
+  emptyHint?: string;
+  compact?: boolean;
+};
+
 /**
  * Single-field inline editor used by the patient hub registration sections.
  *
@@ -33,17 +73,23 @@ export default function InlineEditField({
   disabled = false,
   emptyHint = "",
   compact = false,
-}) {
+}: InlineEditFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(value ?? "");
-  const [submitState, setSubmitState] = useState({ status: "idle", error: "" });
+  const [draft, setDraft] = useState(String(value ?? ""));
+  const [submitState, setSubmitState] = useState<SubmitState>({
+    status: "idle",
+    error: "",
+  });
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const selectButtonRef = useRef<HTMLButtonElement | null>(null);
   const syncedDraft = sanitizeInput
-    ? sanitizeInput(value ?? "")
-    : (value ?? "");
-  const coerceDraft = (nextValue) =>
-    sanitizeInput ? sanitizeInput(nextValue) : nextValue;
+    ? sanitizeInput(String(value ?? ""))
+    : String(value ?? "");
+  const coerceDraft = (nextValue: InlineEditValue) =>
+    sanitizeInput
+      ? sanitizeInput(String(nextValue ?? ""))
+      : String(nextValue ?? "");
 
   useEffect(() => {
     if (!isEditing) setDraft(syncedDraft);
@@ -51,15 +97,15 @@ export default function InlineEditField({
 
   useEffect(() => {
     if (!isEditing) setIsSelectOpen(false);
-  }, [isEditing]);
+  }, [isEditing, type]);
 
   useEffect(() => {
     if (!isEditing) return;
-    const node = inputRef.current;
+    const node = type === "select" ? selectButtonRef.current : inputRef.current;
     if (!node) return;
     node.focus();
-    if (typeof node.select === "function") node.select();
-  }, [isEditing]);
+    if ("select" in node && typeof node.select === "function") node.select();
+  }, [isEditing, type]);
 
   const beginEdit = () => {
     if (disabled) return;
@@ -75,19 +121,14 @@ export default function InlineEditField({
     setIsEditing(false);
   };
 
-  const updateDraft = (nextValue) => {
+  const updateDraft = (nextValue: InlineEditValue) => {
     setDraft(coerceDraft(nextValue));
   };
 
-  const commit = async (candidateValue = draft) => {
+  const commit = async (candidateValue: InlineEditValue = draft) => {
     if (submitState.status === "saving") return;
 
-    const nextValue =
-      candidateValue &&
-      typeof candidateValue === "object" &&
-      "target" in candidateValue
-        ? draft
-        : candidateValue;
+    const nextValue = candidateValue;
     if (
       String(coerceDraft(nextValue) ?? "") === String(coerceDraft(value) ?? "")
     ) {
@@ -112,13 +153,20 @@ export default function InlineEditField({
     } catch (error) {
       setSubmitState({
         status: "error",
-        error: error?.message || "Failed to save.",
+        error: error instanceof Error ? error.message : "Failed to save.",
       });
     }
   };
 
-  const handleKeyDown = (event) => {
-    if (onFormattedKeyDown?.(event, updateDraft)) return;
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (
+      onFormattedKeyDown?.(
+        event as KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+        updateDraft
+      )
+    ) {
+      return;
+    }
 
     if (event.key === "Escape") {
       event.preventDefault();
@@ -168,7 +216,7 @@ export default function InlineEditField({
   const selectedLabel = selectedOption?.label || placeholder;
   const displayText = renderedDisplay || emptyHint || placeholder;
   const displayTooltip = displayTitle || renderedDisplay || "";
-  const handleDisplayKeyDown = (event) => {
+  const handleDisplayKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
     if (event.key !== "Enter" && event.key !== "F2") return;
     event.preventDefault();
     beginEdit();
@@ -256,7 +304,7 @@ export default function InlineEditField({
           {type === "select" ? (
             <div className="relative">
               <button
-                ref={inputRef}
+                ref={selectButtonRef}
                 type="button"
                 disabled={submitState.status === "saving"}
                 onClick={() => setIsSelectOpen((current) => !current)}
@@ -284,7 +332,7 @@ export default function InlineEditField({
                       String(option.value) === String(draft ?? "");
                     return (
                       <button
-                        key={option.value}
+                        key={String(option.value)}
                         type="button"
                         role="option"
                         aria-selected={isSelected}
@@ -292,7 +340,7 @@ export default function InlineEditField({
                         onClick={() => {
                           updateDraft(option.value);
                           setIsSelectOpen(false);
-                          inputRef.current?.focus();
+                          selectButtonRef.current?.focus();
                         }}
                         className={[
                           "flex min-h-8 w-full items-center rounded-lg px-2.5 py-1.5 text-left text-sm leading-5 transition",

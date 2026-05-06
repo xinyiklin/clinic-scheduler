@@ -41,6 +41,32 @@ import {
   handleFormattedInputDeletion,
 } from "../utils/contactValidation";
 
+import type { KeyboardEvent } from "react";
+import type {
+  FieldPath,
+  RegisterOptions,
+  SubmitHandler,
+} from "react-hook-form";
+import type { ApiPayload, EntityId } from "../../../shared/api/types";
+import type {
+  PatientCareProvider,
+  PatientFormValues,
+  PatientRecord,
+  PatientSelectOption,
+  RegisterFormattedField,
+} from "../types";
+
+type PatientModalProps = {
+  isOpen: boolean;
+  mode: "create" | "edit";
+  patient?: PatientRecord | null;
+  facilityId?: EntityId | null;
+  genderOptions: PatientSelectOption[];
+  careProviders?: PatientCareProvider[];
+  onClose?: () => void;
+  onSaved?: (patient: PatientRecord) => void;
+};
+
 export default function PatientModal({
   isOpen,
   mode,
@@ -50,7 +76,7 @@ export default function PatientModal({
   careProviders = [],
   onClose,
   onSaved,
-}) {
+}: PatientModalProps) {
   const {
     register,
     control,
@@ -59,7 +85,7 @@ export default function PatientModal({
     setValue,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm({
+  } = useForm<PatientFormValues>({
     defaultValues: EMPTY_PATIENT_FORM_VALUES,
   });
   const {
@@ -74,7 +100,7 @@ export default function PatientModal({
   const [primaryEmergencyContactIndex, setPrimaryEmergencyContactIndex] =
     useState(0);
   const [editingEmergencyContactIndex, setEditingEmergencyContactIndex] =
-    useState(null);
+    useState<number | null>(null);
   const [showFullSsn, setShowFullSsn] = useState(false);
   const [ssnHint, setSsnHint] = useState("");
   const [revealedSsn, setRevealedSsn] = useState("");
@@ -105,11 +131,11 @@ export default function PatientModal({
     isOpen,
   });
 
-  const registerFormattedField = (
-    name,
-    formatInput,
-    normalizeValue,
-    options = {}
+  const registerFormattedField = <TName extends FieldPath<PatientFormValues>>(
+    name: TName,
+    formatInput: (value: unknown) => string,
+    normalizeValue: (value: unknown) => string,
+    options: RegisterOptions<PatientFormValues, TName> = {}
   ) => {
     const registration = register(name, {
       ...options,
@@ -117,19 +143,19 @@ export default function PatientModal({
     });
     return {
       ...registration,
-      onChange: (event) => {
+      onChange: (event: Parameters<typeof registration.onChange>[0]) => {
         event.target.value = formatInput(event.target.value);
-        registration.onChange(event);
+        return registration.onChange(event);
       },
-      onKeyDown: (event) =>
+      onKeyDown: (event: KeyboardEvent<HTMLInputElement>) =>
         handleFormattedInputDeletion(event, formatInput, (nextValue) => {
-          event.target.value = nextValue;
-          registration.onChange(event);
+          event.currentTarget.value = nextValue;
+          void registration.onChange(event);
         }),
     };
   };
 
-  const registerPhoneField = (name, options = {}) =>
+  const registerPhoneField: RegisterFormattedField = (name, options = {}) =>
     registerFormattedField(
       name,
       formatPhoneInput,
@@ -137,7 +163,7 @@ export default function PatientModal({
       options
     );
 
-  const registerSsnField = (name, options = {}) =>
+  const registerSsnField: RegisterFormattedField = (name, options = {}) =>
     registerFormattedField(name, formatSsnInput, getSsnInputDigits, options);
 
   useEffect(() => {
@@ -158,7 +184,7 @@ export default function PatientModal({
       last_name: patient?.last_name || "",
       preferred_name: patient?.preferred_name || "",
       date_of_birth: patient?.date_of_birth || "",
-      gender: patient?.gender || "",
+      gender: patient?.gender ? String(patient.gender) : "",
       sex_at_birth: patient?.sex_at_birth || "",
       race: patient?.race || "",
       race_declined: patient?.race_declined || false,
@@ -186,9 +212,13 @@ export default function PatientModal({
       emergency_contacts: emergencyContacts,
       ssn: "",
       ssn_last4: patient?.ssn_last4 || "",
-      pcp: patient?.pcp || "",
-      referring_provider: patient?.referring_provider || "",
-      preferred_pharmacy: patient?.preferred_pharmacy || "",
+      pcp: patient?.pcp ? String(patient.pcp) : "",
+      referring_provider: patient?.referring_provider
+        ? String(patient.referring_provider)
+        : "",
+      preferred_pharmacy: patient?.preferred_pharmacy
+        ? String(patient.preferred_pharmacy)
+        : "",
       is_active: patient?.is_active ?? true,
     });
     setPrimaryEmergencyContactIndex(primaryIndex === -1 ? 0 : primaryIndex);
@@ -201,7 +231,7 @@ export default function PatientModal({
 
   if (!isOpen) return null;
 
-  const onSubmit = async (data) => {
+  const onSubmit: SubmitHandler<PatientFormValues> = async (data) => {
     const phones = [
       { label: "cell", number: getPhoneInputDigits(data.phone_cell) },
       { label: "home", number: getPhoneInputDigits(data.phone_home) },
@@ -249,7 +279,7 @@ export default function PatientModal({
       : null;
     const normalizedSsn = String(data.ssn || "").replace(/\D/g, "");
 
-    const payload = {
+    const payload: ApiPayload = {
       first_name: data.first_name.trim(),
       middle_name: data.middle_name.trim(),
       last_name: data.last_name.trim(),
@@ -298,7 +328,7 @@ export default function PatientModal({
           ? await updatePatient(patient.id, payload, facilityId)
           : await createPatient(payload, facilityId);
 
-      onSaved?.(savedPatient);
+      onSaved?.(savedPatient as PatientRecord);
     } catch (error) {
       setSubmitError(getErrorMessage(error, "Failed to save patient."));
     }

@@ -9,7 +9,32 @@ import {
 } from "./patientModalData";
 import { Input, Panel } from "../../../shared/components/ui";
 
-export function PatientAddressPanel({ register }) {
+import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import type {
+  PatientCareProvider,
+  PatientFormValues,
+  PatientSelectOption,
+} from "../types";
+
+type PatientAddressPanelProps = {
+  register: UseFormRegister<PatientFormValues>;
+};
+
+type PatientClinicalProfilePanelProps = {
+  errors: FieldErrors<PatientFormValues>;
+  ethnicityDeclined: boolean;
+  genderOptions: PatientSelectOption[];
+  preferredLanguageDeclined: boolean;
+  raceDeclined: boolean;
+  register: UseFormRegister<PatientFormValues>;
+};
+
+type PatientCareTeamPanelProps = {
+  careProviders: PatientCareProvider[];
+  register: UseFormRegister<PatientFormValues>;
+};
+
+export function PatientAddressPanel({ register }: PatientAddressPanelProps) {
   return (
     <Panel icon={MapPin} title="Patient Address">
       <div className="grid gap-4">
@@ -60,7 +85,7 @@ export function PatientClinicalProfilePanel({
   preferredLanguageDeclined,
   raceDeclined,
   register,
-}) {
+}: PatientClinicalProfilePanelProps) {
   return (
     <Panel icon={HeartPulse} title="Clinical Profile">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -161,7 +186,10 @@ export function PatientClinicalProfilePanel({
   );
 }
 
-export function PatientCareTeamPanel({ careProviders, register }) {
+export function PatientCareTeamPanel({
+  careProviders,
+  register,
+}: PatientCareTeamPanelProps) {
   return (
     <Panel icon={Stethoscope} title="Care Team" tone="subtle">
       <div className="grid gap-4">

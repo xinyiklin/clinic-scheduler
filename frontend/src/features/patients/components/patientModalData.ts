@@ -1,5 +1,17 @@
 import { getPrimaryPatientPhoneDisplay } from "../utils/contactValidation";
 
+import type {
+  EmergencyContactFormValues,
+  PatientCareProvider,
+  PatientFormValues,
+  PatientRecord,
+} from "../types";
+
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
 export const SEX_AT_BIRTH_OPTIONS = [
   { value: "", label: "Not specified" },
   { value: "female", label: "Female" },
@@ -7,7 +19,7 @@ export const SEX_AT_BIRTH_OPTIONS = [
   { value: "intersex", label: "Intersex" },
   { value: "unknown", label: "Unknown" },
   { value: "undisclosed", label: "Undisclosed" },
-];
+] satisfies SelectOption[];
 
 export const RACE_OPTIONS = [
   { value: "", label: "Not specified" },
@@ -24,16 +36,16 @@ export const RACE_OPTIONS = [
   { value: "white", label: "White" },
   { value: "other", label: "Other" },
   { value: "unknown", label: "Unknown" },
-];
+] satisfies SelectOption[];
 
 export const ETHNICITY_OPTIONS = [
   { value: "", label: "Not specified" },
   { value: "hispanic_or_latino", label: "Hispanic or Latino" },
   { value: "not_hispanic_or_latino", label: "Not Hispanic or Latino" },
   { value: "unknown", label: "Unknown" },
-];
+] satisfies SelectOption[];
 
-export const EMPTY_PATIENT_FORM_VALUES = {
+export const EMPTY_PATIENT_FORM_VALUES: PatientFormValues = {
   first_name: "",
   middle_name: "",
   last_name: "",
@@ -69,7 +81,7 @@ export const EMPTY_PATIENT_FORM_VALUES = {
   is_active: true,
 };
 
-export const EMPTY_EMERGENCY_CONTACT = {
+export const EMPTY_EMERGENCY_CONTACT: EmergencyContactFormValues = {
   name: "",
   relationship: "",
   phone_number: "",
@@ -77,18 +89,26 @@ export const EMPTY_EMERGENCY_CONTACT = {
   notes: "",
 };
 
-export function getProviderLabel(provider) {
+export function getProviderLabel(provider: PatientCareProvider): string {
   return (
     provider.display_name ||
     [provider.first_name, provider.last_name].filter(Boolean).join(" ")
   );
 }
 
-export function getPhoneNumberByLabel(patient, label) {
-  return patient?.phones?.find((phone) => phone.label === label)?.number || "";
+export function getPhoneNumberByLabel(
+  patient: PatientRecord | null | undefined,
+  label: string
+): string {
+  const number = patient?.phones?.find(
+    (phone) => phone.label === label
+  )?.number;
+  return number ? String(number) : "";
 }
 
-export function getEmergencyContacts(patient) {
+export function getEmergencyContacts(
+  patient: PatientRecord | null | undefined
+): EmergencyContactFormValues[] {
   const contacts = (patient?.emergency_contacts || []).map((contact) => ({
     name: contact.name || "",
     relationship: contact.relationship || "",
@@ -125,19 +145,25 @@ export function getEmergencyContacts(patient) {
   return [{ ...EMPTY_EMERGENCY_CONTACT }];
 }
 
-export function getMaskedSsn(fullSsn, fallbackLast4) {
+export function getMaskedSsn(
+  fullSsn: string | null | undefined,
+  fallbackLast4?: string | null
+): string {
   const digits = String(fullSsn || "").replace(/\D/g, "");
   const last4 = digits.slice(-4) || fallbackLast4 || "";
 
   return last4 ? `***-**-${last4}` : "Not recorded";
 }
 
-function getMiddleInitial(value) {
+function getMiddleInitial(value: string | null | undefined): string {
   const trimmed = String(value || "").trim();
   return trimmed ? `${trimmed.charAt(0).toUpperCase()}.` : "";
 }
 
-export function getPatientName(values, patient) {
+export function getPatientName(
+  values: Partial<PatientFormValues> | null | undefined,
+  patient: PatientRecord | null | undefined
+): string {
   const firstName = values?.first_name?.trim() || patient?.first_name || "";
   const middleName = values?.middle_name?.trim() || patient?.middle_name || "";
   const lastName = values?.last_name?.trim() || patient?.last_name || "";
@@ -152,7 +178,10 @@ export function getPatientName(values, patient) {
   return displayName || preferredName || "New patient";
 }
 
-export function getPatientInitials(values, patient) {
+export function getPatientInitials(
+  values: Partial<PatientFormValues> | null | undefined,
+  patient: PatientRecord | null | undefined
+): string {
   const initials = [
     values?.first_name || patient?.first_name,
     values?.last_name || patient?.last_name,
@@ -168,11 +197,15 @@ export function getPatientInitials(values, patient) {
   return initials ? initials.slice(0, 2).toUpperCase() : "PT";
 }
 
-export function getPrimaryPhone(values) {
+export function getPrimaryPhone(
+  values: Partial<PatientFormValues> | null | undefined
+): string {
   return getPrimaryPatientPhoneDisplay(values);
 }
 
-export function getAddressPreview(values) {
+export function getAddressPreview(
+  values: Partial<PatientFormValues> | null | undefined
+): string {
   const cityStateZip = [
     values?.address_city,
     [values?.address_state, values?.address_zip_code].filter(Boolean).join(" "),
@@ -185,7 +218,10 @@ export function getAddressPreview(values) {
     .join(" · ");
 }
 
-export function getProviderName(careProviders, providerId) {
+export function getProviderName(
+  careProviders: PatientCareProvider[],
+  providerId: string | number | null | undefined
+): string {
   if (!providerId) return "";
   const provider = careProviders.find(
     (option) => String(option.id) === String(providerId)

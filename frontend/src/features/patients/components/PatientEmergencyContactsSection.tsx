@@ -8,6 +8,57 @@ import {
   validatePhoneNumber,
 } from "../utils/contactValidation";
 
+import type { Dispatch, SetStateAction } from "react";
+import type {
+  FieldArrayWithId,
+  FieldErrors,
+  UseFieldArrayAppend,
+  UseFieldArrayRemove,
+  UseFormRegister,
+} from "react-hook-form";
+import type {
+  EmergencyContactFormValues,
+  PatientFormValues,
+  RegisterFormattedField,
+} from "../types";
+
+type EmergencyContactField = FieldArrayWithId<
+  PatientFormValues,
+  "emergency_contacts",
+  "id"
+>;
+
+type EmergencyContactEditorProps = {
+  contactPreview?: Partial<EmergencyContactFormValues> | null;
+  emergencyContactFields: EmergencyContactField[];
+  errors: FieldErrors<PatientFormValues>;
+  index: number;
+  isPrimary: boolean;
+  onClose: () => void;
+  register: UseFormRegister<PatientFormValues>;
+  registerPhoneField: RegisterFormattedField;
+  removeEmergencyContact: UseFieldArrayRemove;
+  setEditingEmergencyContactIndex: Dispatch<SetStateAction<number | null>>;
+  setPrimaryEmergencyContactIndex: Dispatch<SetStateAction<number>>;
+};
+
+type PatientEmergencyContactsSectionProps = {
+  appendEmergencyContact: UseFieldArrayAppend<
+    PatientFormValues,
+    "emergency_contacts"
+  >;
+  editingEmergencyContactIndex: number | null;
+  emergencyContactFields: EmergencyContactField[];
+  errors: FieldErrors<PatientFormValues>;
+  primaryEmergencyContactIndex: number;
+  register: UseFormRegister<PatientFormValues>;
+  registerPhoneField: RegisterFormattedField;
+  removeEmergencyContact: UseFieldArrayRemove;
+  setEditingEmergencyContactIndex: Dispatch<SetStateAction<number | null>>;
+  setPrimaryEmergencyContactIndex: Dispatch<SetStateAction<number>>;
+  watchedEmergencyContacts: EmergencyContactFormValues[];
+};
+
 function EmergencyContactEditor({
   contactPreview,
   emergencyContactFields,
@@ -20,7 +71,7 @@ function EmergencyContactEditor({
   removeEmergencyContact,
   setEditingEmergencyContactIndex,
   setPrimaryEmergencyContactIndex,
-}) {
+}: EmergencyContactEditorProps) {
   const contactName = contactPreview?.name?.trim() || `Contact ${index + 1}`;
 
   return (
@@ -113,7 +164,7 @@ function EmergencyContactEditor({
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-cf-border px-5 py-4">
           <Button
             type="button"
-            variant={isPrimary ? "default" : "ghost"}
+            variant="default"
             onClick={() => setPrimaryEmergencyContactIndex(index)}
           >
             <Star className="h-4 w-4" />
@@ -121,7 +172,7 @@ function EmergencyContactEditor({
           </Button>
           <Button
             type="button"
-            variant="ghost"
+            variant="default"
             onClick={() => {
               removeEmergencyContact(index);
               setPrimaryEmergencyContactIndex((current) => {
@@ -163,11 +214,16 @@ export default function PatientEmergencyContactsSection({
   setEditingEmergencyContactIndex,
   setPrimaryEmergencyContactIndex,
   watchedEmergencyContacts,
-}) {
+}: PatientEmergencyContactsSectionProps) {
   const closeEditor = () => setEditingEmergencyContactIndex(null);
-  const editedField = emergencyContactFields[editingEmergencyContactIndex];
+  const editedField =
+    editingEmergencyContactIndex === null
+      ? null
+      : emergencyContactFields[editingEmergencyContactIndex];
   const editedContact =
-    watchedEmergencyContacts[editingEmergencyContactIndex] || editedField;
+    editingEmergencyContactIndex === null
+      ? null
+      : watchedEmergencyContacts[editingEmergencyContactIndex] || editedField;
 
   return (
     <>

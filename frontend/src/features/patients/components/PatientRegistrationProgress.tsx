@@ -14,7 +14,50 @@ import {
   getProviderName,
 } from "./patientModalData";
 
-export function buildRegistrationSteps(values) {
+import type { LucideIcon } from "lucide-react";
+import type {
+  EmergencyContactFormValues,
+  PatientCareProvider,
+  PatientFormValues,
+  PatientRecord,
+} from "../types";
+
+export type RegistrationStep = {
+  key: string;
+  label: string;
+  meta: string;
+  icon: LucideIcon;
+  complete: boolean;
+};
+
+type PreviewMetricProps = {
+  label: string;
+  value?: string | number | null;
+  tone?: "default" | "success" | "warning";
+};
+
+type RegistrationProgressRibbonProps = {
+  steps: RegistrationStep[];
+  completionPercent: number;
+};
+
+type RegistrationRailProps = {
+  steps: RegistrationStep[];
+};
+
+type RegistrationLensProps = {
+  patientName: string;
+  patientInitials: string;
+  patient?: PatientRecord | null;
+  values: Partial<PatientFormValues>;
+  maskedSsn: string;
+  careProviders: PatientCareProvider[];
+  primaryEmergencyContact?: EmergencyContactFormValues | null;
+};
+
+export function buildRegistrationSteps(
+  values: Partial<PatientFormValues>
+): RegistrationStep[] {
   const hasName = Boolean(
     values?.first_name?.trim() && values?.last_name?.trim()
   );
@@ -68,7 +111,7 @@ export function buildRegistrationSteps(values) {
   ];
 }
 
-function PreviewMetric({ label, value, tone = "default" }) {
+function PreviewMetric({ label, value, tone = "default" }: PreviewMetricProps) {
   const toneClass =
     tone === "success"
       ? "border-cf-success-text/35 bg-cf-success-bg text-cf-success-text"
@@ -88,7 +131,10 @@ function PreviewMetric({ label, value, tone = "default" }) {
   );
 }
 
-export function RegistrationProgressRibbon({ steps, completionPercent }) {
+export function RegistrationProgressRibbon({
+  steps,
+  completionPercent,
+}: RegistrationProgressRibbonProps) {
   return (
     <section className="overflow-hidden rounded-2xl border border-cf-border bg-cf-surface p-4 shadow-[var(--shadow-panel)]">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -133,7 +179,7 @@ export function RegistrationProgressRibbon({ steps, completionPercent }) {
   );
 }
 
-export function RegistrationRail({ steps }) {
+export function RegistrationRail({ steps }: RegistrationRailProps) {
   return (
     <aside className="hidden xl:block">
       <div className="sticky top-0 rounded-2xl border border-cf-border bg-cf-surface p-3 shadow-[var(--shadow-panel)]">
@@ -184,7 +230,7 @@ export function RegistrationLens({
   maskedSsn,
   careProviders,
   primaryEmergencyContact,
-}) {
+}: RegistrationLensProps) {
   const primaryPhone = getPrimaryPhone(values);
   const addressPreview = getAddressPreview(values);
   const pcpName = getProviderName(careProviders, values?.pcp);
