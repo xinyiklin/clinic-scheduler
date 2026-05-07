@@ -9,7 +9,10 @@ import formatAppointments from "../../appointments/utils/formatAppointments";
 import useAppointments from "../../appointments/hooks/useAppointments";
 import useAppointmentMutations from "../../appointments/hooks/useAppointmentMutations";
 import useAppointmentFlow from "../../appointments/hooks/useAppointmentFlow";
-import { beginAppointmentEditSession } from "../../appointments/api/appointments";
+import {
+  beginAppointmentEditSession,
+  releaseAppointmentEditSession,
+} from "../../appointments/api/appointments";
 import useSchedulePageColumns from "../hooks/useSchedulePageColumns";
 import useFacility from "../../facilities/hooks/useFacility";
 import useFacilityConfig from "../../facilities/hooks/useFacilityConfig";
@@ -417,6 +420,27 @@ export default function SchedulePage() {
     []
   );
 
+  const beginDropEditSession = useCallback(
+    async (appointmentId: EntityId) => {
+      try {
+        const result = await beginAppointmentEditSession(
+          selectedFacilityId,
+          appointmentId
+        );
+
+        if (result?.status === "occupied") {
+          showEditBlockedDialog(result.active_editor || null);
+          return null;
+        }
+
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [selectedFacilityId, showEditBlockedDialog]
+  );
+
   useEffect(() => {
     if (!contextMenuState.isOpen) return undefined;
 
@@ -447,6 +471,11 @@ export default function SchedulePage() {
   ) => {
     const appointmentId = dragged?.id;
     if (!appointmentId) return;
+    setAppError("");
+
+    const shouldReleaseEditSession = await beginDropEditSession(appointmentId);
+    if (shouldReleaseEditSession === null) return;
+
     const resourceId =
       nextResourceId !== undefined ? nextResourceId : dragged.resource || null;
     const buildPayload = (overrides: ApiRecord = {}) => ({
@@ -486,6 +515,13 @@ export default function SchedulePage() {
           });
         },
       });
+    } finally {
+      if (shouldReleaseEditSession) {
+        await releaseAppointmentEditSession(
+          selectedFacilityId,
+          appointmentId
+        ).catch(() => {});
+      }
     }
   };
 
